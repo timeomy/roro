@@ -29,7 +29,7 @@ things between any MCP client and any MCP server, without changing either.
 Requires Go 1.27 or newer.
 
 ```sh
-git clone <this repo> && cd tollgate
+git clone https://github.com/timeomy/tollgate && cd tollgate
 go build -o bin/tollgate ./cmd/tollgate
 go build -o bin/echo-server ./examples/echo-server
 ./bin/tollgate version
@@ -118,3 +118,7 @@ go test -race ./...
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+## Maintainer
+
+Built and maintained by Jabez Kok.

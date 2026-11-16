@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"example.com/tollgate/internal/proxy"
+	"github.com/timeomy/tollgate/internal/proxy"
 )
 
 func newWrapCmd(root *rootFlags) *cobra.Command {

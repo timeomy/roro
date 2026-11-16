@@ -1,4 +1,4 @@
-module example.com/tollgate
+module github.com/timeomy/tollgate
 
 go 1.27.4
 
