@@ -38,6 +38,12 @@ type Relay struct {
 	CloseUpstreamInput func() error
 	DrainTimeout       time.Duration
 
+	// Interceptor, if set, inspects and may answer or rewrite messages.
+	// Nil means plain pass-through.
+	Interceptor Interceptor
+
+	inflight sync.WaitGroup
+
 	Logger *slog.Logger
 }
 
@@ -70,6 +76,12 @@ func (r *Relay) Run(parent context.Context) error {
 	results := make(chan pumpResult, 2)
 	go func() { results <- r.pump(ctx, clientToUpstream, r.Client, r.Upstream) }()
 	go func() { results <- r.pump(ctx, upstreamToClient, r.Upstream, r.Client) }()
+	defer func() {
+		r.inflight.Wait()
+		if r.Interceptor != nil {
+			r.Interceptor.Close()
+		}
+	}()
 
 	first := <-results
 	drained := r.drainAfterClientEOF(ctx, first, results)
@@ -118,10 +130,59 @@ func (r *Relay) pump(ctx context.Context, dir direction, src, dst mcp.Connection
 			return pumpResult{dir: dir, err: err}
 		}
 		r.logMessage(dir, msg)
-		if err := dst.Write(ctx, msg); err != nil {
-			return pumpResult{dir: dir, err: fmt.Errorf("write %s: %w", dir, err)}
+		if err := r.route(ctx, dir, msg); err != nil {
+			return pumpResult{dir: dir, err: err}
 		}
 	}
+}
+
+// route delivers one message, through the interceptor if there is one.
+// Messages that may block (a tools/call waiting for human approval) are
+// handled on their own goroutine so other traffic keeps flowing.
+func (r *Relay) route(ctx context.Context, dir direction, msg jsonrpc.Message) error {
+	ic := r.Interceptor
+	switch {
+	case ic == nil && dir == clientToUpstream:
+		return r.write(ctx, r.Upstream, dir, msg)
+	case ic == nil:
+		return r.write(ctx, r.Client, dir, msg)
+	case dir == upstreamToClient:
+		if out := ic.FromUpstream(ctx, msg); out != nil {
+			return r.write(ctx, r.Client, dir, out)
+		}
+		return nil
+	case ic.Blocking(msg):
+		r.inflight.Add(1)
+		go func() {
+			defer r.inflight.Done()
+			if err := r.dispatchClient(ctx, msg); err != nil {
+				r.logger().Debug("dropping message after write failure", "err", err)
+			}
+		}()
+		return nil
+	default:
+		return r.dispatchClient(ctx, msg)
+	}
+}
+
+func (r *Relay) dispatchClient(ctx context.Context, msg jsonrpc.Message) error {
+	up, down := r.Interceptor.FromClient(ctx, msg)
+	if up != nil {
+		if err := r.write(ctx, r.Upstream, clientToUpstream, up); err != nil {
+			return err
+		}
+	}
+	if down != nil {
+		return r.write(ctx, r.Client, upstreamToClient, down)
+	}
+	return nil
+}
+
+func (r *Relay) write(ctx context.Context, dst mcp.Connection, dir direction, msg jsonrpc.Message) error {
+	if err := dst.Write(ctx, msg); err != nil {
+		return fmt.Errorf("write %s: %w", dir, err)
+	}
+	return nil
 }
 
 // closeBoth closes both connections concurrently. Closing the upstream of a

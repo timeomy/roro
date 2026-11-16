@@ -1,0 +1,26 @@
+{
+  "source": "https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/mcp.md and docs/gen-ai/execute-tool.md",
+  "read_on": "2026-11-16",
+  "status": "Development",
+  "attributes": [
+    "mcp.method.name",
+    "mcp.session.id",
+    "mcp.protocol.version",
+    "jsonrpc.request.id",
+    "gen_ai.tool.name",
+    "gen_ai.operation.name",
+    "gen_ai.agent.name",
+    "network.transport",
+    "error.type"
+  ],
+  "values": {
+    "gen_ai.operation.name": "execute_tool",
+    "mcp.method.name": "tools/call",
+    "network.transport": ["pipe", "tcp"],
+    "error.type (CallToolResult.isError)": "tool_error"
+  },
+  "span_name": "{mcp.method.name} {gen_ai.tool.name}",
+  "metrics": {
+    "mcp.server.operation.duration": {"instrument": "histogram", "unit": "s"}
+  }
+}

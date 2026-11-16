@@ -92,3 +92,14 @@ func (p *upstreamProcess) stop() error {
 		return <-done
 	}
 }
+
+// StartCommand starts an upstream MCP server process and returns its
+// connection and a stop function (close stdin, wait, SIGTERM, kill). It is
+// used by HTTP sessions, which each get their own upstream process.
+func StartCommand(ctx context.Context, name string, args []string, stderr io.Writer, grace time.Duration) (mcp.Connection, func() error, error) {
+	up, err := startUpstream(ctx, name, args, stderr, grace)
+	if err != nil {
+		return nil, nil, err
+	}
+	return up.conn, up.stop, nil
+}

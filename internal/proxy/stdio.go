@@ -37,6 +37,9 @@ type StdioOptions struct {
 	// TerminateGrace overrides DefaultTerminateGrace when positive.
 	TerminateGrace time.Duration
 
+	// Interceptor enforces policy; nil means plain pass-through.
+	Interceptor Interceptor
+
 	Logger *slog.Logger
 }
 
@@ -68,6 +71,7 @@ func RunStdio(ctx context.Context, opts StdioOptions) error {
 		Upstream:           up.conn,
 		CloseUpstreamInput: up.closeInput,
 		DrainTimeout:       grace,
+		Interceptor:        opts.Interceptor,
 		Logger:             opts.Logger,
 	}
 	runErr := relay.Run(ctx)
