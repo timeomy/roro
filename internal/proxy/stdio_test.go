@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -15,6 +16,9 @@ import (
 // over in-process pipes standing in for Tollgate's stdin/stdout.
 func TestRunStdioWithRealProcess(t *testing.T) {
 	bin := filepath.Join(t.TempDir(), "echo-server")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
 	if out, err := exec.Command("go", "build", "-o", bin, "../../examples/echo-server").CombinedOutput(); err != nil {
 		t.Fatalf("build echo-server: %v\n%s", err, out)
 	}

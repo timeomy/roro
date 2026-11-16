@@ -1,19 +1,12 @@
 # Cursor
 
 Config file: `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` (one
-project). `mcp.json` in this folder wraps the Tollgate echo server; replace
-the paths with your own.
+project).
 
-```json
-{
-  "mcpServers": {
-    "echo-via-tollgate": {
-      "command": "/absolute/path/to/tollgate",
-      "args": ["wrap", "--", "/absolute/path/to/echo-server"]
-    }
-  }
-}
-```
+1. `tollgate init --dir ~/tollgate --sandbox ~/tollgate/sandbox --agent cursor`
+2. Wrap each server, as in [`mcp.json`](mcp.json), with absolute paths.
+3. Open Cursor Settings > MCP and check the server is connected.
 
-After saving, open Cursor Settings > MCP and check the server shows as
-connected with the `echo` and `fail` tools.
+Blocked calls show as tool errors that start with "Tollgate blocked the
+call". Run `tollgate logs` to see why, and `tollgate approvals watch` in a
+terminal if your policy uses approvals.

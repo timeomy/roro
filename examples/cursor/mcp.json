@@ -1,8 +1,12 @@
 {
   "mcpServers": {
-    "echo-via-tollgate": {
-      "command": "/absolute/path/to/tollgate",
-      "args": ["wrap", "--", "/absolute/path/to/echo-server"]
+    "filesystem-via-tollgate": {
+      "command": "/usr/local/bin/tollgate",
+      "args": [
+        "--config", "/Users/me/tollgate/tollgate.yaml",
+        "wrap", "--agent", "cursor", "--client", "cursor",
+        "--", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/Users/me/tollgate/sandbox"
+      ]
     }
   }
 }
