@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "echo-via-tollgate": {
+      "command": "/absolute/path/to/tollgate",
+      "args": ["wrap", "--", "/absolute/path/to/echo-server"]
+    }
+  }
+}
