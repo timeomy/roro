@@ -24,9 +24,9 @@ func (passInterceptor) FromUpstream(_ context.Context, m jsonrpc.Message) jsonrp
 func (passInterceptor) Blocking(jsonrpc.Message) bool                                     { return false }
 func (passInterceptor) Close()                                                            {}
 
-func newTestHTTP(t *testing.T) *httptest.Server {
+func newTestHTTP(t *testing.T, mutate ...func(*HTTPOptions)) *httptest.Server {
 	t.Helper()
-	hs, err := NewHTTPServer(HTTPOptions{
+	opts := HTTPOptions{
 		Authenticate: func(r *http.Request) (identity.Agent, bool) {
 			switch r.Header.Get("Authorization") {
 			case "Bearer alice":
@@ -47,7 +47,11 @@ func newTestHTTP(t *testing.T) *httptest.Server {
 			}
 			return &Backend{Interceptor: passInterceptor{}, Upstream: conn}, nil
 		},
-	})
+	}
+	for _, m := range mutate {
+		m(&opts)
+	}
+	hs, err := NewHTTPServer(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,5 +147,34 @@ func TestHTTPRejections(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer alice")
 	if r, err := http.DefaultClient.Do(req); err != nil || r.StatusCode != http.StatusMethodNotAllowed {
 		t.Errorf("GET: %v %v", r, err)
+	}
+}
+
+func TestHTTPSessionLimits(t *testing.T) {
+	srv := newTestHTTP(t, func(o *HTTPOptions) { o.MaxSessions = 3; o.MaxSessionsPerAgent = 2 })
+	for i := range 2 {
+		if r := post(t, srv.URL, "alice", "", initBody); r.StatusCode != 200 {
+			t.Fatalf("alice session %d: status %d", i, r.StatusCode)
+		}
+	}
+	if r := post(t, srv.URL, "alice", "", initBody); r.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("alice over per-agent cap: status %d, want 429", r.StatusCode)
+	}
+	first := post(t, srv.URL, "bob", "", initBody)
+	if first.StatusCode != 200 {
+		t.Fatalf("bob session: status %d", first.StatusCode)
+	}
+	if r := post(t, srv.URL, "bob", "", initBody); r.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("over total cap: status %d, want 429", r.StatusCode)
+	}
+	// Ending a session frees its slot.
+	req, _ := http.NewRequest(http.MethodDelete, srv.URL, nil)
+	req.Header.Set("Authorization", "Bearer bob")
+	req.Header.Set(headerSessionID, first.Header.Get(headerSessionID))
+	if r, err := http.DefaultClient.Do(req); err != nil || r.StatusCode != http.StatusNoContent {
+		t.Fatalf("DELETE: %v %v", r, err)
+	}
+	if r := post(t, srv.URL, "bob", "", initBody); r.StatusCode != 200 {
+		t.Fatalf("after DELETE: status %d", r.StatusCode)
 	}
 }

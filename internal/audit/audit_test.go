@@ -280,3 +280,51 @@ func TestQueryAndExport(t *testing.T) {
 	}
 	_ = f.log.Close()
 }
+
+// Rolling the log back to an earlier checkpoint verifies on its own (the
+// documented limit), but fails against an anchor recorded earlier.
+func TestRollbackDetectedOnlyWithAnchor(t *testing.T) {
+	f := newFixture(t, 3)
+	f.appendN(t, 9) // checkpoints at 3, 6, 9
+	_ = f.log.Close()
+	before := f.verify(t, true)
+	if !before.OK() || !strings.HasPrefix(before.Anchor, "9:") {
+		t.Fatalf("before: ok=%v anchor=%q problems=%v", before.OK(), before.Anchor, before.Problems)
+	}
+	anchor, err := ParseAnchor(before.Anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := f.raw(t)
+	for _, q := range []string{`DELETE FROM events WHERE seq > 6`, `DELETE FROM checkpoints WHERE seq > 6`} {
+		if _, err := db.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if rep := f.verify(t, true); !rep.OK() {
+		t.Fatalf("rolled-back log should verify on its own (known limit): %v", rep.Problems)
+	}
+	pub, _ := LoadPublicKey(f.pubKey)
+	rep, err := Verify(t.Context(), db, VerifyOptions{PublicKey: pub, Expect: []Anchor{anchor}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustFail(t, rep, "rollback")
+
+	bad := anchor
+	bad.Seq = 3
+	rep, _ = Verify(t.Context(), db, VerifyOptions{PublicKey: pub, Expect: []Anchor{bad}})
+	mustFail(t, rep, "rewritten")
+}
+
+func TestParseAnchor(t *testing.T) {
+	good := "12:" + strings.Repeat("ab", 32)
+	if a, err := ParseAnchor(good); err != nil || a.Seq != 12 || a.String() != good {
+		t.Fatalf("ParseAnchor(%q) = %+v, %v", good, a, err)
+	}
+	for _, s := range []string{"", "12", "x:" + strings.Repeat("ab", 32), "0:" + strings.Repeat("ab", 32), "1:zz", "1:" + strings.Repeat("zz", 32)} {
+		if _, err := ParseAnchor(s); err == nil {
+			t.Errorf("ParseAnchor(%q) accepted", s)
+		}
+	}
+}

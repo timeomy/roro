@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -30,7 +31,8 @@ type call struct {
 	req      *jsonrpc.Request
 	tool     string
 	args     map[string]any
-	redacted []byte // redacted arguments, canonical JSON
+	redacted []byte           // redacted arguments, canonical JSON
+	forward  *jsonrpc.Request // the request to send upstream if allowed
 }
 
 // verdict is the final decision for a call.
@@ -89,26 +91,29 @@ func (s *Session) handleCall(ctx context.Context, req *jsonrpc.Request) (jsonrpc
 	s.calls[idKey(req.ID)] = &pendingCall{start: s.deps.Now(), span: span, tool: c.tool, id: idString(req.ID)}
 	s.mu.Unlock()
 	s.log.Debug("tool call allowed", "tool", c.tool, "reason", v.reason)
-	return req, nil
+	return c.forward, nil
 }
 
 func parseCall(req *jsonrpc.Request) (call, error) {
 	c := call{req: req, args: map[string]any{}, redacted: []byte("{}")}
-	var p struct {
-		Name      string          `json:"name"`
-		Arguments json.RawMessage `json:"arguments"`
+	members, err := canonicalParams(req.Params)
+	if err != nil {
+		return c, fmt.Errorf("tools/call params rejected: %w", err)
 	}
-	if err := json.Unmarshal(req.Params, &p); err != nil {
-		return c, errors.New("tools/call params must be an object")
+	if err := json.Unmarshal(members["name"], &c.tool); err != nil || c.tool == "" {
+		c.tool = ""
+		return c, errors.New("tools/call params.name is required and must be a string")
 	}
-	c.tool = p.Name
-	if p.Name == "" {
-		return c, errors.New("tools/call params.name is required")
+	if !toolNamePattern.MatchString(c.tool) {
+		name := c.tool
+		c.tool = ""
+		return c, fmt.Errorf("tools/call params.name %q is not a valid tool name (1-128 of A-Z a-z 0-9 . _ : / -)", truncate(name, 64))
 	}
-	if len(p.Arguments) > 0 && !bytes.Equal(bytes.TrimSpace(p.Arguments), []byte("null")) {
-		dec := json.NewDecoder(bytes.NewReader(p.Arguments))
+	if raw := bytes.TrimSpace(members["arguments"]); len(raw) > 0 && !bytes.Equal(raw, []byte("null")) {
+		dec := json.NewDecoder(bytes.NewReader(raw))
 		dec.UseNumber()
-		if err := dec.Decode(&c.args); err != nil {
+		if err := dec.Decode(&c.args); err != nil || c.args == nil {
+			c.args = map[string]any{}
 			return c, errors.New("tools/call params.arguments must be an object")
 		}
 	}
@@ -117,6 +122,13 @@ func parseCall(req *jsonrpc.Request) (call, error) {
 		return c, errors.New("tools/call arguments could not be encoded")
 	}
 	c.redacted = red
+	// Forward params re-encoded from the members the gate decided on, never
+	// the bytes as received.
+	params, err := json.Marshal(members)
+	if err != nil {
+		return c, errors.New("tools/call params could not be encoded")
+	}
+	c.forward = &jsonrpc.Request{ID: req.ID, Method: req.Method, Params: params}
 	return c, nil
 }
 
@@ -126,22 +138,9 @@ func (s *Session) decide(ctx context.Context, c call) verdict {
 	agent := s.info.Agent.Name
 	now := s.deps.Now()
 
-	ks, err := s.deps.Kill.Check(ctx, agent)
-	if err != nil {
-		s.log.Error("kill switch state unreadable; denying", "err", err)
-		return verdict{outcome: policy.Deny, reason: policy.ReasonStateUnavailable, detail: "kill switch state unreadable"}
-	}
-	if ks.Active {
-		return verdict{outcome: policy.Deny, reason: policy.ReasonKillSwitch, detail: "kill switch active for " + ks.Scope}
-	}
-
-	pinStatus, err := s.deps.Pins.Status(ctx, s.info.Server, c.tool)
-	if err != nil {
-		s.log.Error("pin state unreadable", "err", err)
-	}
-	if pinStatus == pin.StatusChanged && s.deps.PinOnChange == config.PinBlock && s.deps.Mode == config.ModeEnforce {
-		return verdict{outcome: policy.Deny, reason: policy.ReasonToolChanged,
-			detail: "tool definition changed since it was pinned; review with `tollgate pins list`"}
+	pinStatus, block := s.precheck(ctx, c)
+	if block != nil {
+		return *block
 	}
 
 	agentRate, toolRate := s.deps.Rates.Record(agent, c.tool, now)
@@ -161,12 +160,48 @@ func (s *Session) decide(ctx context.Context, c call) verdict {
 			detail: "monitor mode; policy outcome was " + string(d.Outcome)}
 	}
 	if d.Outcome == policy.RequireApproval {
-		return s.askHuman(ctx, c, d)
+		v = s.askHuman(ctx, c, d)
+		if v.outcome == policy.Allow {
+			// The wait can last minutes: re-check the controls a human
+			// approval must not override.
+			if _, block := s.precheck(ctx, c); block != nil {
+				block.approvalID, block.policyIDs = v.approvalID, v.policyIDs
+				block.detail += " (after approval)"
+				return *block
+			}
+		}
 	}
 	return v
 }
 
+// precheck runs the kill switch and pin checks. It returns the tool's pin
+// status, and a non-nil verdict when the call must be denied.
+func (s *Session) precheck(ctx context.Context, c call) (string, *verdict) {
+	ks, err := s.deps.Kill.Check(ctx, s.info.Agent.Name)
+	if err != nil {
+		s.log.Error("kill switch state unreadable; denying", "err", err)
+		return "", &verdict{outcome: policy.Deny, reason: policy.ReasonStateUnavailable, detail: "kill switch state unreadable"}
+	}
+	if ks.Active {
+		return "", &verdict{outcome: policy.Deny, reason: policy.ReasonKillSwitch, detail: "kill switch active for " + ks.Scope}
+	}
+	pinStatus, err := s.deps.Pins.Status(ctx, s.info.Server, c.tool)
+	if err != nil {
+		s.log.Error("pin state unreadable", "err", err)
+	}
+	if pinStatus == pin.StatusChanged && s.deps.PinOnChange == config.PinBlock && s.deps.Mode == config.ModeEnforce {
+		return pinStatus, &verdict{outcome: policy.Deny, reason: policy.ReasonToolChanged,
+			detail: "tool definition changed since it was pinned; review with `tollgate pins list`"}
+	}
+	return pinStatus, nil
+}
+
 func (s *Session) askHuman(ctx context.Context, c call, d policy.Decision) verdict {
+	if !s.deps.ApprovalSlots.tryAcquire() {
+		return verdict{outcome: policy.Deny, reason: policy.ReasonApprovalError, policyIDs: d.PolicyIDs,
+			detail: "too many calls are already waiting for approval"}
+	}
+	defer s.deps.ApprovalSlots.release()
 	id := approval.NewID()
 	key := idKey(c.req.ID)
 	ctx, cancel := context.WithCancel(ctx)
@@ -174,6 +209,9 @@ func (s *Session) askHuman(ctx context.Context, c call, d policy.Decision) verdi
 	s.mu.Lock()
 	s.cancels[key] = cancel
 	s.mu.Unlock()
+	if s.wasCancelled(c.req.ID) {
+		cancel()
+	}
 	defer func() {
 		s.mu.Lock()
 		delete(s.cancels, key)
@@ -191,7 +229,7 @@ func (s *Session) askHuman(ctx context.Context, c call, d policy.Decision) verdi
 	})
 	v := verdict{outcome: policy.Deny, policyIDs: d.PolicyIDs, approvalID: id}
 	switch {
-	case err != nil && ctx.Err() != nil:
+	case ctx.Err() != nil || s.wasCancelled(c.req.ID):
 		v.reason, v.detail = policy.ReasonApprovalCancelled, "approval wait cancelled"
 	case err != nil:
 		v.reason, v.detail = policy.ReasonApprovalError, redact.String(err.Error())
@@ -216,12 +254,26 @@ func (s *Session) cancelApproval(req *jsonrpc.Request) {
 	if err != nil {
 		return
 	}
+	key := idKey(id)
 	s.mu.Lock()
-	cancel := s.cancels[idKey(id)]
+	cancel := s.cancels[key]
+	if r := s.inflight[key]; r != nil {
+		// Remember the cancel even if the approval wait has not started yet,
+		// so a cancel that races ahead of it is not lost.
+		r.cancelled = true
+	}
 	s.mu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
+}
+
+// wasCancelled reports whether the client cancelled request id.
+func (s *Session) wasCancelled(id jsonrpc.ID) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r := s.inflight[idKey(id)]
+	return r != nil && r.cancelled
 }
 
 // record appends the decision to the audit log.

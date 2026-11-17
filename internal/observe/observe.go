@@ -41,6 +41,9 @@ type Config struct {
 	Version     string
 }
 
+// metricCardinalityLimit caps attribute sets per metric instrument.
+const metricCardinalityLimit = 1000
+
 // Setup creates OTLP/HTTP exporters, or no-op telemetry if disabled.
 func Setup(ctx context.Context, cfg Config) (*Telemetry, error) {
 	if cfg.Endpoint == "" {
@@ -65,7 +68,11 @@ func Setup(ctx context.Context, cfg Config) (*Telemetry, error) {
 		return nil, fmt.Errorf("observe: metric exporter: %w", err)
 	}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(texp), sdktrace.WithResource(res))
-	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(mexp)), sdkmetric.WithResource(res))
+	// Tool names come from clients, so cap metric series: past the limit,
+	// new attribute sets fold into one overflow series instead of growing
+	// memory and backend cost without bound.
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(mexp)), sdkmetric.WithResource(res),
+		sdkmetric.WithCardinalityLimit(metricCardinalityLimit))
 	shutdown := func(ctx context.Context) error {
 		return errors.Join(tp.Shutdown(ctx), mp.Shutdown(ctx))
 	}

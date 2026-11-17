@@ -14,6 +14,7 @@ import (
 
 	"github.com/timeomy/tollgate/internal/app"
 	"github.com/timeomy/tollgate/internal/approval"
+	"github.com/timeomy/tollgate/internal/redact"
 )
 
 func newApprovalsCmd(root *rootFlags) *cobra.Command {
@@ -155,12 +156,16 @@ func watchLoop(ctx context.Context, db *sql.DB, in io.Reader, out io.Writer) err
 
 func printRequest(w io.Writer, r approval.Request) {
 	fmt.Fprintf(w, "\n=== approval %s ===\n", r.ID)
-	fmt.Fprintf(w, "agent:    %s\n", r.Agent)
-	fmt.Fprintf(w, "server:   %s\n", r.Server)
-	fmt.Fprintf(w, "tool:     %s\n", r.Tool)
-	fmt.Fprintf(w, "policy:   %s (%s)\n", r.Reason, strings.Join(r.PolicyIDs, ", "))
+	fmt.Fprintf(w, "agent:    %s\n", clean(r.Agent))
+	fmt.Fprintf(w, "server:   %s\n", clean(r.Server))
+	fmt.Fprintf(w, "tool:     %s\n", clean(r.Tool))
+	fmt.Fprintf(w, "policy:   %s (%s)\n", clean(r.Reason), clean(strings.Join(r.PolicyIDs, ", ")))
 	fmt.Fprintf(w, "expires:  %s (in %s)\n", r.Expires.Local().Format(time.TimeOnly), time.Until(r.Expires).Round(time.Second))
-	fmt.Fprintf(w, "arguments (exactly as sent, secrets redacted):\n%s\n", indent(r.ArgsJSON))
+	fmt.Fprintf(w, "arguments (as sent, secrets redacted):\n%s\n", indent(cleanMultiline(r.ArgsJSON)))
+	if redact.Contains(r.ArgsJSON) {
+		fmt.Fprintln(w, "WARNING:  some argument values are hidden by secret redaction; the server")
+		fmt.Fprintln(w, "          receives the original values. Deny if you cannot tell what this call does.")
+	}
 }
 
 func indent(s string) string {

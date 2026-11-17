@@ -81,12 +81,14 @@ func runServe(ctx context.Context, root *rootFlags, listen string, command []str
 	defer rt.Close()
 
 	hs, err := proxy.NewHTTPServer(proxy.HTTPOptions{
-		Authenticate:   func(r *http.Request) (identity.Agent, bool) { return dir.Lookup(bearer(r)) },
-		NewBackend:     backendFactory(rt, cfg, server, command),
-		AllowedOrigins: cfg.HTTP.AllowedOrigins,
-		MaxBodyBytes:   cfg.HTTP.MaxBodyBytes,
-		IdleTimeout:    cfg.HTTP.SessionIdle.Duration,
-		Logger:         logger,
+		Authenticate:        func(r *http.Request) (identity.Agent, bool) { return dir.Lookup(bearer(r)) },
+		NewBackend:          backendFactory(rt, cfg, server, command),
+		AllowedOrigins:      cfg.HTTP.AllowedOrigins,
+		MaxBodyBytes:        cfg.HTTP.MaxBodyBytes,
+		IdleTimeout:         cfg.HTTP.SessionIdle.Duration,
+		MaxSessions:         cfg.HTTP.MaxSessions,
+		MaxSessionsPerAgent: cfg.HTTP.MaxSessionsPerAgent,
+		Logger:              logger,
 	})
 	if err != nil {
 		return err
@@ -146,7 +148,14 @@ func listenAndServe(ctx context.Context, cfg *config.Config, listen string, h ht
 }) error {
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", h)
-	srv := &http.Server{Addr: listen, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{
+		Addr: listen, Handler: mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       time.Minute,
+		// A POST can wait for a human approval; leave room for it.
+		WriteTimeout: cfg.Approval.Timeout.Duration + time.Minute,
+		IdleTimeout:  2 * time.Minute,
+	}
 	ln, err := net.Listen("tcp", listen)
 	if err != nil {
 		return err

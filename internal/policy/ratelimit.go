@@ -18,8 +18,9 @@ const maxTracked = 10000
 // Counters live in process memory. Each Tollgate process counts its own
 // traffic; see docs/policy.md.
 type RateCounter struct {
-	mu     sync.Mutex
-	events map[string][]time.Time
+	mu        sync.Mutex
+	events    map[string][]time.Time
+	lastSweep time.Time
 }
 
 // NewRateCounter returns an empty counter.
@@ -32,9 +33,32 @@ func NewRateCounter() *RateCounter {
 func (c *RateCounter) Record(agent, tool string, now time.Time) (agentCount, toolCount int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.sweep(now)
 	agentCount = c.add("a\x00"+agent, now)
 	toolCount = c.add("t\x00"+agent+"\x00"+tool, now)
 	return agentCount, toolCount
+}
+
+// sweep drops keys with no events in the window, at most once per window,
+// so keys for tool names an agent made up do not accumulate.
+func (c *RateCounter) sweep(now time.Time) {
+	if now.Sub(c.lastSweep) < RateWindow {
+		return
+	}
+	c.lastSweep = now
+	cutoff := now.Add(-RateWindow)
+	for k, ts := range c.events {
+		if len(ts) == 0 || !ts[len(ts)-1].After(cutoff) {
+			delete(c.events, k)
+		}
+	}
+}
+
+// keys reports how many keys are tracked (for tests).
+func (c *RateCounter) keys() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.events)
 }
 
 func (c *RateCounter) add(key string, now time.Time) int {

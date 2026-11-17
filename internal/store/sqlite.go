@@ -60,6 +60,43 @@ func OpenExisting(ctx context.Context, path string) (*sql.DB, error) {
 	return Open(ctx, path)
 }
 
+// OpenReadOnly opens an existing database without writing to it: no schema,
+// no journal-mode change. verify, logs and export use it, so auditing a
+// copy of a log (even on read-only media) never modifies it.
+func OpenReadOnly(ctx context.Context, path string) (*sql.DB, error) {
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("store: %w", err)
+	}
+	if strings.ContainsAny(path, "?#") {
+		return nil, fmt.Errorf("store: database path %q must not contain '?' or '#'", path)
+	}
+	base := "file:" + filepath.ToSlash(path) + "?mode=ro&_pragma=busy_timeout(10000)"
+	db, err := openProbe(ctx, base)
+	if err != nil {
+		// A WAL database needs its -shm file, which SQLite cannot create in
+		// a read-only directory. Nothing can be writing to a file there, so
+		// reading it as immutable is safe.
+		db, err = openProbe(ctx, base+"&immutable=1")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("store: open %s read-only: %w", path, err)
+	}
+	return db, nil
+}
+
+func openProbe(ctx context.Context, dsn string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return nil, err
+	}
+	var n int
+	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master").Scan(&n); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return db, nil
+}
+
 // InTx runs fn in a write transaction and commits it if fn returns nil.
 func InTx(ctx context.Context, db *sql.DB, fn func(*sql.Tx) error) error {
 	tx, err := db.BeginTx(ctx, nil)

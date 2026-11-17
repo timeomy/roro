@@ -2,6 +2,7 @@ package policy
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,6 +78,15 @@ func TestStarterPolicyDecisions(t *testing.T) {
 		{"unknown tool", req("delete_repo", `{}`), Deny, ReasonNoMatchingPermit},
 		{"numeric bound ok", req("search", `{"q":"x","limit":100}`), Allow, ReasonPermitted},
 		{"numeric bound exceeded", req("search", `{"q":"x","limit":101}`), Deny, ReasonNoMatchingPermit},
+		{"numeric bound above int64", req("search", `{"q":"x","limit":99999999999999999999}`), Deny, ReasonEvaluationError},
+		{"numeric bound 1e400", req("search", `{"q":"x","limit":1e400}`), Deny, ReasonEvaluationError},
+		{"numeric bound 1e19", req("search", `{"q":"x","limit":1e19}`), Deny, ReasonEvaluationError},
+		{"numeric bound 2^63", req("search", `{"q":"x","limit":9223372036854775808}`), Deny, ReasonEvaluationError},
+		{"numeric bound float 2^63", req("search", `{"q":"x","limit":9.223372036854775808e18}`), Deny, ReasonEvaluationError},
+		{"numeric bound nested overflow", req("search", `{"q":"x","limit":5,"opts":[1e400]}`), Deny, ReasonEvaluationError},
+		{"numeric bound float in range", req("search", `{"q":"x","limit":1e2}`), Allow, ReasonPermitted},
+		{"numeric bound string", req("search", `{"q":"x","limit":"5000"}`), Deny, ReasonNoMatchingPermit},
+		{"null optional arg is absent", req("search", `{"q":"x","limit":null}`), Allow, ReasonPermitted},
 		{"echo", req("echo", `{"text":"hi"}`), Allow, ReasonPermitted},
 	}
 	for _, c := range cases {
@@ -220,5 +230,20 @@ func TestRateCounterSlidingWindow(t *testing.T) {
 	}
 	if b, _ := c.Record("b", "echo", t0); b != 1 {
 		t.Fatalf("agents share counters: %d", b)
+	}
+}
+
+func TestRateCounterSweepsStaleKeys(t *testing.T) {
+	c := NewRateCounter()
+	t0 := time.Unix(1_800_000_000, 0)
+	for i := range 500 {
+		c.Record("bot", fmt.Sprintf("made_up_%d", i), t0)
+	}
+	if c.keys() < 500 {
+		t.Fatalf("keys = %d", c.keys())
+	}
+	c.Record("bot", "echo", t0.Add(2*RateWindow))
+	if got := c.keys(); got != 2 { // the agent key and bot/echo
+		t.Fatalf("after sweep keys = %d, want 2", got)
 	}
 }

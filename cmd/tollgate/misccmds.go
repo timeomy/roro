@@ -36,7 +36,7 @@ it is hidden and its calls are denied until you accept the new definition.`,
 					if p.PendingHash != "" {
 						st = pin.StatusChanged + " -> " + p.PendingHash[:12]
 					}
-					fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", p.Server, p.Tool, st, p.Hash[:12], p.FirstSeen)
+					fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", clean(p.Server), clean(p.Tool), st, p.Hash[:12], p.FirstSeen)
 				}
 				return tw.Flush()
 			})

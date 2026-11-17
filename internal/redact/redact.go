@@ -7,7 +7,10 @@
 package redact
 
 import (
+	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -24,7 +27,6 @@ type rule struct {
 
 // rules are applied in order to every string value.
 var rules = []rule{
-	{regexp.MustCompile(`-----BEGIN [A-Z0-9 ]+-----[\s\S]*?-----END [A-Z0-9 ]+-----`), "[REDACTED:pem]"},
 	{regexp.MustCompile(`(?i)\bbearer\s+[A-Za-z0-9\-._~+/]+=*`), "Bearer " + Marker},
 	{regexp.MustCompile(`(?i)\bbasic\s+[A-Za-z0-9+/]{8,}=*`), "Basic " + Marker},
 	{regexp.MustCompile(`\b(AKIA|ASIA)[0-9A-Z]{16}\b`), "[REDACTED:aws_key]"},
@@ -42,8 +44,16 @@ var rules = []rule{
 	{regexp.MustCompile(`(?i)\b(api[_-]?key|password|passwd|secret|token|access[_-]?token|client[_-]?secret)(\s*[:=]\s*["']?)[^\s"'&,;]+`), "${1}${2}" + Marker},
 }
 
+// pemBlock matches a PEM block. The body may only hold base64 and PEM header
+// characters, so attacker-supplied BEGIN/END markers cannot swallow arbitrary
+// text (shell metacharacters, quotes, braces) and hide it from an approver.
+var pemBlock = regexp.MustCompile(`-----BEGIN [A-Z0-9 ]{1,64}-----[A-Za-z0-9+/=\s:,.\-]*?-----END [A-Z0-9 ]{1,64}-----`)
+
 // String redacts secrets inside a string.
 func String(s string) string {
+	s = pemBlock.ReplaceAllStringFunc(s, func(m string) string {
+		return fmt.Sprintf("[REDACTED:pem %d bytes]", len(m))
+	})
 	for _, r := range rules {
 		s = r.re.ReplaceAllString(s, r.repl)
 	}
@@ -55,18 +65,21 @@ func IsSecretKey(key string) bool { return secretKey.MatchString(key) }
 
 // Value returns a redacted deep copy of a JSON-like value (the result of
 // json.Unmarshal into any). The input is never modified.
+//
+// Everything under a secret-looking key is masked, including nested objects
+// and arrays. Keys are redacted too, since a secret can be sent as a key.
 func Value(v any) any {
 	switch t := v.(type) {
 	case map[string]any:
 		out := make(map[string]any, len(t))
-		for k, val := range t {
+		for _, k := range slices.Sorted(maps.Keys(t)) { // sorted: collision suffixes are stable
+			val := t[k]
+			key := uniqueKey(out, String(k))
 			if IsSecretKey(k) && val != nil {
-				if _, isObj := val.(map[string]any); !isObj {
-					out[k] = Marker
-					continue
-				}
+				out[key] = Marker
+				continue
 			}
-			out[k] = Value(val)
+			out[key] = Value(val)
 		}
 		return out
 	case []any:
@@ -81,6 +94,23 @@ func Value(v any) any {
 		return v
 	}
 }
+
+// uniqueKey keeps two keys distinct when redaction maps both to the same
+// text, so no value is silently dropped from the copy.
+func uniqueKey(m map[string]any, key string) string {
+	if _, taken := m[key]; !taken {
+		return key
+	}
+	for i := 2; ; i++ {
+		k := fmt.Sprintf("%s#%d", key, i)
+		if _, taken := m[k]; !taken {
+			return k
+		}
+	}
+}
+
+// Contains reports whether s holds redaction output.
+func Contains(s string) bool { return strings.Contains(s, "[REDACTED") }
 
 // Headers redacts sensitive HTTP header values in a copy of h.
 func Headers(h map[string][]string) map[string][]string {

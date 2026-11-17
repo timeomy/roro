@@ -32,10 +32,13 @@ func buildRequest(r Request, matcherNames []string) (cedar.Request, cedar.Entity
 	action := cedar.NewEntityUID(EntityAction, ActionCall)
 	resource := cedar.NewEntityUID(EntityTool, cedar.String(r.Tool))
 
-	args, _ := toCedar(r.Args)
-	argsRec, ok := args.(cedar.Record)
-	if !ok {
-		argsRec = cedar.NewRecord(nil)
+	argsRec := cedar.NewRecord(nil)
+	if r.Args != nil {
+		args, err := toCedar(r.Args)
+		if err != nil {
+			return cedar.Request{}, nil, fmt.Errorf("policy: argument %w", err)
+		}
+		argsRec = args.(cedar.Record)
 	}
 	entities := cedar.EntityMap{
 		principal: {UID: principal, Attributes: cedar.NewRecord(cedar.RecordMap{
@@ -70,60 +73,95 @@ func buildRequest(r Request, matcherNames []string) (cedar.Request, cedar.Entity
 	return cedar.Request{Principal: principal, Action: action, Resource: resource, Context: ctx}, entities, nil
 }
 
-// toCedar converts a decoded JSON value to a Cedar value. Nulls and values
-// Cedar cannot represent are dropped (ok=false), so `has` checks in policy
-// see them as absent.
-func toCedar(v any) (cedar.Value, bool) {
+// maxLongPlusOne is 2^63, the first float64 above Cedar's Long range.
+const maxLongPlusOne = 9223372036854775808.0
+
+// toCedar converts a decoded JSON value to a Cedar value. A number Cedar
+// cannot represent (outside the Long range and not a representable decimal,
+// NaN, infinities) is an error, never dropped: a dropped argument would make
+// `resource.args has x` false and let a bounded argument through unchecked.
+// The caller denies on error.
+//
+// JSON null is the one value that is dropped: Cedar has no null, and MCP
+// servers treat a null optional argument as absent, which is what policy
+// sees (`has` is false). Policies that bound an argument must therefore
+// either require it (`resource.args has limit && ...`) or accept that an
+// absent or null argument means the server's default.
+func toCedar(v any) (cedar.Value, error) {
 	switch t := v.(type) {
 	case string:
-		return cedar.String(t), true
+		return cedar.String(t), nil
 	case bool:
-		return cedar.Boolean(t), true
+		return cedar.Boolean(t), nil
 	case json.Number:
 		if i, err := t.Int64(); err == nil {
-			return cedar.Long(i), true
+			return cedar.Long(i), nil
 		}
 		f, err := t.Float64()
 		if err != nil {
-			return nil, false
+			return nil, fmt.Errorf("number %s is out of range", truncateNum(t.String()))
 		}
 		return floatToCedar(f)
 	case float64:
 		return floatToCedar(t)
 	case int:
-		return cedar.Long(t), true
+		return cedar.Long(t), nil
 	case int64:
-		return cedar.Long(t), true
+		return cedar.Long(t), nil
 	case []any:
 		vals := make([]cedar.Value, 0, len(t))
 		for _, e := range t {
-			if cv, ok := toCedar(e); ok {
-				vals = append(vals, cv)
+			if e == nil {
+				continue
 			}
+			cv, err := toCedar(e)
+			if err != nil {
+				return nil, err
+			}
+			vals = append(vals, cv)
 		}
-		return cedar.NewSet(vals...), true
+		return cedar.NewSet(vals...), nil
 	case map[string]any:
 		rm := make(cedar.RecordMap, len(t))
 		for k, e := range t {
-			if cv, ok := toCedar(e); ok {
-				rm[cedar.String(k)] = cv
+			if e == nil {
+				continue
 			}
+			cv, err := toCedar(e)
+			if err != nil {
+				return nil, fmt.Errorf("%q: %w", truncateNum(k), err)
+			}
+			rm[cedar.String(k)] = cv
 		}
-		return cedar.NewRecord(rm), true
+		return cedar.NewRecord(rm), nil
+	case nil:
+		return nil, fmt.Errorf("value is null, which policy cannot evaluate")
 	default:
-		return nil, false
+		return nil, fmt.Errorf("value of type %T cannot be evaluated", v)
 	}
 }
 
-func floatToCedar(f float64) (cedar.Value, bool) {
-	if f == math.Trunc(f) && f >= math.MinInt64 && f <= math.MaxInt64 {
-		return cedar.Long(int64(f)), true
+func floatToCedar(f float64) (cedar.Value, error) {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return nil, fmt.Errorf("number is out of range")
+	}
+	// Compare against 2^63 exactly: float64(math.MaxInt64) rounds up to 2^63,
+	// and int64(2^63) overflows.
+	if f == math.Trunc(f) && f >= math.MinInt64 && f < maxLongPlusOne {
+		return cedar.Long(int64(f)), nil
 	}
 	d, err := cedar.NewDecimalFromFloat(f)
 	if err != nil {
-		return nil, false
+		return nil, fmt.Errorf("number %g is out of range", f)
 	}
-	return d, true
+	return d, nil
+}
+
+func truncateNum(s string) string {
+	if len(s) > 32 {
+		return s[:32] + "..."
+	}
+	return s
 }
 
 // derivedPaths exposes cleaned forms of top-level string arguments that look

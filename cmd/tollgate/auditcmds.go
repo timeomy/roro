@@ -48,12 +48,13 @@ func (l *logLocation) resolve(root *rootFlags, needKey bool) error {
 }
 
 func (l *logLocation) open(ctx context.Context) (*sql.DB, error) {
-	return store.OpenExisting(ctx, l.log)
+	return store.OpenReadOnly(ctx, l.log)
 }
 
 func newVerifyCmd(root *rootFlags) *cobra.Command {
 	var loc logLocation
 	var sealed bool
+	var expect []string
 	cmd := &cobra.Command{
 		Use:   "verify",
 		Short: "Verify the audit log's hash chain and checkpoint signatures",
@@ -67,7 +68,14 @@ without access to the signing key. verify never writes to the log.
 
 Events after the last checkpoint ("unsealed") are covered by the hash chain
 but not yet by a signature; --require-sealed makes them an error. Tollgate
-writes a checkpoint on clean shutdown and on kill/resume.`,
+writes a checkpoint on clean shutdown and on kill/resume.
+
+The log cannot prove on its own that it was not rolled back to an earlier
+checkpoint by someone with write access to it. verify prints an "anchor"
+(seq:hash of the latest checkpoint): record it outside the state directory
+and pass it back with --expect to detect a rollback or rewrite past it.
+For the same reason, verify with a copy of the public key kept outside the
+state directory, not the .pub file next to the signing key.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := loc.resolve(root, true); err != nil {
@@ -82,7 +90,15 @@ writes a checkpoint on clean shutdown and on kill/resume.`,
 				return err
 			}
 			defer db.Close()
-			rep, err := audit.Verify(cmd.Context(), db, audit.VerifyOptions{PublicKey: pub, RequireSealed: sealed})
+			anchors := make([]audit.Anchor, 0, len(expect))
+			for _, s := range expect {
+				a, err := audit.ParseAnchor(s)
+				if err != nil {
+					return err
+				}
+				anchors = append(anchors, a)
+			}
+			rep, err := audit.Verify(cmd.Context(), db, audit.VerifyOptions{PublicKey: pub, RequireSealed: sealed, Expect: anchors})
 			if err != nil {
 				return err
 			}
@@ -95,6 +111,7 @@ writes a checkpoint on clean shutdown and on kill/resume.`,
 	}
 	loc.register(cmd, true)
 	cmd.Flags().BoolVar(&sealed, "require-sealed", false, "fail if events exist after the last checkpoint")
+	cmd.Flags().StringArrayVar(&expect, "expect", nil, "anchor `SEQ:HASH` from an earlier verify that the log must still contain (repeatable)")
 	return cmd
 }
 
@@ -104,13 +121,16 @@ func printReport(w io.Writer, path, keyID string, rep audit.Report) {
 	fmt.Fprintf(w, "events:       %d (last seq %d)\n", rep.Events, rep.LastSeq)
 	fmt.Fprintf(w, "checkpoints:  %d (last covers seq %d)\n", rep.Checkpoints, rep.LastCheckpointSeq)
 	fmt.Fprintf(w, "unsealed:     %d\n", rep.Unsealed)
+	if rep.Anchor != "" {
+		fmt.Fprintf(w, "anchor:       %s\n", rep.Anchor)
+	}
 	if rep.OK() {
 		fmt.Fprintln(w, "result:       OK - hash chain and signatures verified")
 		return
 	}
 	fmt.Fprintln(w, "result:       FAILED")
 	for _, p := range rep.Problems {
-		fmt.Fprintf(w, "  - %s\n", p)
+		fmt.Fprintf(w, "  - %s\n", clean(p))
 	}
 }
 
@@ -185,12 +205,13 @@ func printEvents(w io.Writer, evs []audit.Event) {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "SEQ\tTIME (UTC)\tKIND\tAGENT\tTOOL\tDECISION\tREASON\tARGS")
 	for _, e := range evs {
-		args := e.ArgsPreview
+		args := []rune(clean(e.ArgsPreview))
 		if len(args) > 60 {
-			args = args[:57] + "..."
+			args = append(args[:57], []rune("...")...)
 		}
 		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", e.Seq, e.Time.Format("2006-01-02 15:04:05"),
-			e.Kind, e.Agent, e.Tool, dash(e.Decision), dash(e.Reason), strings.ReplaceAll(args, "\n", " "))
+			e.Kind, clean(e.Agent), clean(e.Tool), dash(clean(e.Decision)), dash(clean(e.Reason)),
+			strings.ReplaceAll(string(args), "\t", " "))
 	}
 	_ = tw.Flush()
 }

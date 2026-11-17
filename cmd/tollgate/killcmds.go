@@ -58,7 +58,7 @@ func runSwitch(cmd *cobra.Command, root *rootFlags, kill bool, agent, reason str
 	if err != nil {
 		return err
 	}
-	// Open the audit log first: an action we cannot record is not taken.
+	// Open the audit log first, so a broken log is found before acting.
 	log, err := app.OpenAudit(ctx, cfg)
 	if err != nil {
 		return err
@@ -71,19 +71,28 @@ func runSwitch(cmd *cobra.Command, root *rootFlags, kill bool, agent, reason str
 	defer db.Close()
 	sw := killswitch.New(db)
 	who := actor()
-	kind := audit.KindResume
+	record := func(kind string) error {
+		_, err := log.Append(ctx, audit.Event{Kind: kind, Agent: agent, Reason: killswitch.Scope(agent),
+			Detail: fmt.Sprintf("by=%s reason=%s", who, reason)})
+		return err
+	}
+	// Order is chosen so a failure leaves agents stopped: a kill takes
+	// effect even if it cannot be recorded (the error is still reported);
+	// a resume that cannot be recorded is not done.
 	if kill {
-		kind = audit.KindKill
-		err = sw.Kill(ctx, agent, reason, who)
+		if err := sw.Kill(ctx, agent, reason, who); err != nil {
+			return err
+		}
+		if err := record(audit.KindKill); err != nil {
+			return fmt.Errorf("kill switch is ON, but the audit log could not record it: %w", err)
+		}
 	} else {
-		err = sw.Resume(ctx, agent, reason, who)
-	}
-	if err != nil {
-		return err
-	}
-	if _, err := log.Append(ctx, audit.Event{Kind: kind, Agent: agent, Reason: killswitch.Scope(agent),
-		Detail: fmt.Sprintf("by=%s reason=%s", who, reason)}); err != nil {
-		return err
+		if err := record(audit.KindResume); err != nil {
+			return fmt.Errorf("not resumed: the audit log could not record it: %w", err)
+		}
+		if err := sw.Resume(ctx, agent, reason, who); err != nil {
+			return err
+		}
 	}
 	if err := log.Checkpoint(ctx); err != nil {
 		return err
@@ -126,7 +135,7 @@ func printStatus(ctx context.Context, cmd *cobra.Command, sdb *sql.DB, mode stri
 	var active []string
 	for _, e := range entries {
 		if e.Active {
-			active = append(active, fmt.Sprintf("%s (by %s: %s)", e.Scope, e.Actor, e.Reason))
+			active = append(active, fmt.Sprintf("%s (by %s: %s)", clean(e.Scope), clean(e.Actor), clean(e.Reason)))
 		}
 	}
 	if len(active) == 0 {

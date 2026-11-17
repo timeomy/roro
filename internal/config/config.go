@@ -83,6 +83,9 @@ type MatcherConfig struct {
 // ApprovalConfig configures human approval.
 type ApprovalConfig struct {
 	Timeout Duration `yaml:"timeout"`
+	// MaxPending caps approval waits per Tollgate process; calls beyond it
+	// are denied rather than queued.
+	MaxPending int `yaml:"max_pending"`
 }
 
 // PinningConfig configures tool-definition pinning.
@@ -99,12 +102,16 @@ type AuditConfig struct {
 
 // HTTPConfig configures `tollgate serve`.
 type HTTPConfig struct {
-	Listen         string         `yaml:"listen"`
-	AllowedOrigins []string       `yaml:"allowed_origins"`
-	Agents         []HTTPAgent    `yaml:"agents"`
-	SessionIdle    Duration       `yaml:"session_idle_timeout"`
-	MaxBodyBytes   int64          `yaml:"max_body_bytes"`
-	TLS            *HTTPTLSConfig `yaml:"tls"`
+	Listen         string      `yaml:"listen"`
+	AllowedOrigins []string    `yaml:"allowed_origins"`
+	Agents         []HTTPAgent `yaml:"agents"`
+	SessionIdle    Duration    `yaml:"session_idle_timeout"`
+	MaxBodyBytes   int64       `yaml:"max_body_bytes"`
+	// MaxSessions caps concurrent MCP sessions (each runs an upstream).
+	MaxSessions int `yaml:"max_sessions"`
+	// MaxSessionsPerAgent caps concurrent sessions per agent token.
+	MaxSessionsPerAgent int            `yaml:"max_sessions_per_agent"`
+	TLS                 *HTTPTLSConfig `yaml:"tls"`
 }
 
 // HTTPTLSConfig enables TLS on the listener.
@@ -207,6 +214,15 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Approval.Timeout.Duration == 0 {
 		c.Approval.Timeout.Duration = 2 * time.Minute
+	}
+	if c.Approval.MaxPending == 0 {
+		c.Approval.MaxPending = 16
+	}
+	if c.HTTP.MaxSessions == 0 {
+		c.HTTP.MaxSessions = 64
+	}
+	if c.HTTP.MaxSessionsPerAgent == 0 {
+		c.HTTP.MaxSessionsPerAgent = 8
 	}
 	if c.Pinning.OnChange == "" {
 		c.Pinning.OnChange = PinBlock

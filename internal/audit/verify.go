@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 // Report is the result of Verify.
@@ -14,6 +16,11 @@ type Report struct {
 	LastSeq           int64
 	Checkpoints       int
 	LastCheckpointSeq int64
+	// Anchor is "<seq>:<entry_hash>" of the latest valid checkpoint. Record
+	// it somewhere the log's writer cannot change (a ticket, a remote log,
+	// another machine) and pass it back with VerifyOptions.Expect: a later
+	// copy of the log that was rolled back past it then fails.
+	Anchor string
 	// Unsealed counts events after the last checkpoint. They are covered by
 	// the hash chain but not yet by a signature, so deleting them would not
 	// be detected. Tollgate checkpoints on clean shutdown to keep this at 0.
@@ -39,7 +46,33 @@ type VerifyOptions struct {
 	// RequireSealed fails verification if any event is after the last
 	// checkpoint.
 	RequireSealed bool
+	// Expect lists anchors (from an earlier Report.Anchor) the log must
+	// still contain, with the same hash. This is what detects a rollback to
+	// an earlier checkpoint, which the log alone cannot show.
+	Expect []Anchor
 }
+
+// Anchor pins one event: the log must still hold Seq with entry hash Hash.
+type Anchor struct {
+	Seq  int64
+	Hash string
+}
+
+// ParseAnchor parses "<seq>:<hex entry hash>".
+func ParseAnchor(s string) (Anchor, error) {
+	var a Anchor
+	seqStr, hash, ok := strings.Cut(s, ":")
+	seq, err := strconv.ParseInt(seqStr, 10, 64)
+	if !ok || err != nil || seq < 1 || len(hash) != 64 {
+		return a, fmt.Errorf("anchor %q: want <seq>:<64 hex chars>, as printed by verify", s)
+	}
+	if _, err := hex.DecodeString(hash); err != nil {
+		return a, fmt.Errorf("anchor %q: hash is not hex", s)
+	}
+	return Anchor{Seq: seq, Hash: strings.ToLower(hash)}, nil
+}
+
+func (a Anchor) String() string { return fmt.Sprintf("%d:%s", a.Seq, a.Hash) }
 
 // Verify recomputes the hash chain and checks every checkpoint. It fails if:
 //   - a row is missing or out of order (seq gap or prev_hash mismatch),
@@ -71,6 +104,16 @@ func Verify(ctx context.Context, db *sql.DB, opts VerifyOptions) (Report, error)
 	}
 	if rep.Events > 0 && rep.Checkpoints == 0 {
 		rep.fail("no checkpoints: the log has %d events but no signed checkpoint", rep.Events)
+	}
+	for _, a := range opts.Expect {
+		switch h, ok := hashes[a.Seq]; {
+		case a.Seq > rep.LastSeq:
+			rep.fail("rollback: expected anchor seq %d, but the log ends at seq %d", a.Seq, rep.LastSeq)
+		case !ok:
+			rep.fail("anchor seq %d: row is missing or invalid", a.Seq)
+		case h != a.Hash:
+			rep.fail("anchor seq %d: log has hash %s, anchor recorded %s (log was rewritten)", a.Seq, short(h), short(a.Hash))
+		}
 	}
 	if opts.RequireSealed && rep.Unsealed > 0 {
 		rep.fail("unsealed: %d events after the last checkpoint (seq %d)", rep.Unsealed, rep.LastCheckpointSeq)
@@ -137,6 +180,9 @@ func verifyCheckpoints(cps []Checkpoint, hashes map[int64]string, pub ed25519.Pu
 			rep.fail("checkpoint %d: row seq %d is missing or invalid", c.ID, c.Seq)
 		case h != c.EntryHash:
 			rep.fail("checkpoint %d: row seq %d has hash %s, checkpoint signed %s", c.ID, c.Seq, short(h), short(c.EntryHash))
+		}
+		if ok && h == c.EntryHash && c.Seq >= rep.LastCheckpointSeq {
+			rep.Anchor = Anchor{Seq: c.Seq, Hash: c.EntryHash}.String()
 		}
 		rep.LastCheckpointSeq = max(rep.LastCheckpointSeq, c.Seq)
 	}

@@ -30,8 +30,8 @@ any MCP server, without changing either:
 - **Policy as code**: [Cedar](https://www.cedarpolicy.com/) policies allow,
   deny, or require human approval for tool calls, with argument rules (path
   prefixes, host allowlists, numeric bounds, regex matchers) and rate limits.
-- **Human approval**: risky calls wait for a person, who sees the raw tool and
-  arguments. No answer means no.
+- **Human approval**: risky calls wait for a person, who sees the actual tool
+  name and arguments (secrets redacted), never a summary. No answer means no.
 - **Tamper-evident audit log**: SQLite, SHA-256 hash chain, Ed25519-signed
   checkpoints, secret redaction, `tollgate verify`.
 - **Kill switch**: stop all agents, or one, at the next tool call.
@@ -138,7 +138,7 @@ When policy marks a call `@approval`, it waits (default 2 minutes) for a
 human in any terminal:
 
 ```sh
-tollgate approvals watch      # prompts y/N for each request, showing raw tool + args
+tollgate approvals watch      # prompts y/N for each request, showing tool + args
 tollgate approvals list
 tollgate approvals approve 3f9a1c2b7d4e
 ```
@@ -150,11 +150,16 @@ $ tollgate verify --require-sealed
 events:       8 (last seq 8)
 checkpoints:  1 (last covers seq 8)
 unsealed:     0
+anchor:       8:3f1c...e9a2
 result:       OK - hash chain and signatures verified
 ```
 
 `verify` needs only the public key (`.tollgate/audit-signing.key.pub`), so an
 auditor can check a copy: `tollgate verify --log copy.db --pubkey key.pub`.
+It also prints an `anchor:` line. Store it somewhere off the machine and
+pass it back with `--expect SEQ:HASH`. That is what catches a log rolled
+back to an earlier checkpoint, which the log alone cannot prove (see the
+[threat model](docs/threat-model.md)).
 It exits non-zero if any row was changed, removed, or reordered, a signature
 is bad, or the log was cut short. `tollgate export -o audit.jsonl` exports
 events and checkpoints with their hashes and signatures.

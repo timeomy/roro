@@ -55,6 +55,8 @@ approval:
   # A require-approval call waits this long for "tollgate approvals"; then it
   # is denied.
   timeout: 2m
+  # Calls beyond this many concurrent approval waits are denied.
+  max_pending: 16
 
 pinning:
   # block: hide changed tools and deny calls until "tollgate pins accept".
@@ -66,6 +68,9 @@ audit:
 
 http:
   listen: 127.0.0.1:8787
+  # Each session runs its own upstream server.
+  max_sessions: 64
+  max_sessions_per_agent: 8
   # agents:
   #   - name: research-bot
   #     token_sha256: <from "tollgate token new --agent research-bot">

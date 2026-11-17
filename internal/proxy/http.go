@@ -51,7 +51,11 @@ type HTTPOptions struct {
 	AllowedOrigins []string
 	MaxBodyBytes   int64
 	IdleTimeout    time.Duration
-	Logger         *slog.Logger
+	// MaxSessions and MaxSessionsPerAgent cap concurrent sessions; each
+	// session runs its own upstream. Zero means the defaults (64 and 8).
+	MaxSessions         int
+	MaxSessionsPerAgent int
+	Logger              *slog.Logger
 }
 
 // HTTPServer is Tollgate's MCP streamable HTTP endpoint.
@@ -67,6 +71,7 @@ type HTTPServer struct {
 	log      *slog.Logger
 	mu       sync.Mutex
 	sessions map[string]*httpSession
+	starting map[string]int // sessions being started, by agent
 	stop     chan struct{}
 	stopOnce sync.Once
 }
@@ -79,6 +84,12 @@ func NewHTTPServer(opts HTTPOptions) (*HTTPServer, error) {
 	if opts.MaxBodyBytes <= 0 {
 		opts.MaxBodyBytes = 4 << 20
 	}
+	if opts.MaxSessions <= 0 {
+		opts.MaxSessions = 64
+	}
+	if opts.MaxSessionsPerAgent <= 0 {
+		opts.MaxSessionsPerAgent = 8
+	}
 	if opts.IdleTimeout <= 0 {
 		opts.IdleTimeout = 30 * time.Minute
 	}
@@ -86,7 +97,7 @@ func NewHTTPServer(opts HTTPOptions) (*HTTPServer, error) {
 	if l == nil {
 		l = slog.New(slog.DiscardHandler)
 	}
-	s := &HTTPServer{opts: opts, log: l, sessions: map[string]*httpSession{}, stop: make(chan struct{})}
+	s := &HTTPServer{opts: opts, log: l, sessions: map[string]*httpSession{}, starting: map[string]int{}, stop: make(chan struct{})}
 	go s.reap()
 	return s, nil
 }
@@ -171,6 +182,10 @@ func (s *HTTPServer) sessionFor(r *http.Request, agent identity.Agent, msg jsonr
 			return nil, false, http.StatusBadRequest, errors.New("missing Mcp-Session-Id (only initialize may start a session)")
 		}
 		sess, err := s.newSession(agent)
+		if errors.Is(err, errSessionLimit) {
+			s.log.Warn("session limit reached", "agent", agent.Name)
+			return nil, false, http.StatusTooManyRequests, err
+		}
 		if err != nil {
 			s.log.Error("could not start session", "agent", agent.Name, "err", err)
 			return nil, false, http.StatusServiceUnavailable, errors.New("could not start upstream session")
@@ -188,12 +203,48 @@ func (s *HTTPServer) sessionFor(r *http.Request, agent identity.Agent, msg jsonr
 	return sess, false, 0, nil
 }
 
+// errSessionLimit means a new session would exceed a configured cap.
+var errSessionLimit = errors.New("too many sessions; end one (DELETE) or wait for idle sessions to expire")
+
+// reserve claims a session slot for agent before its upstream is started.
+func (s *HTTPServer) reserve(agent string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	total, mine := len(s.sessions), s.starting[agent]
+	for _, n := range s.starting {
+		total += n
+	}
+	for _, sess := range s.sessions {
+		if sess.agent.Name == agent {
+			mine++
+		}
+	}
+	if total >= s.opts.MaxSessions || mine >= s.opts.MaxSessionsPerAgent {
+		return false
+	}
+	s.starting[agent]++
+	return true
+}
+
+func (s *HTTPServer) unreserve(agent string) {
+	s.starting[agent]--
+	if s.starting[agent] <= 0 {
+		delete(s.starting, agent)
+	}
+}
+
 func (s *HTTPServer) newSession(agent identity.Agent) (*httpSession, error) {
+	if !s.reserve(agent.Name) {
+		return nil, errSessionLimit
+	}
 	id := rand.Text()
 	ctx, cancel := context.WithCancel(context.Background())
 	b, err := s.opts.NewBackend(ctx, agent, id)
 	if err != nil {
 		cancel()
+		s.mu.Lock()
+		s.unreserve(agent.Name)
+		s.mu.Unlock()
 		return nil, err
 	}
 	sess := &httpSession{
@@ -202,6 +253,7 @@ func (s *HTTPServer) newSession(agent identity.Agent) (*httpSession, error) {
 	}
 	sess.touch()
 	s.mu.Lock()
+	s.unreserve(agent.Name)
 	s.sessions[id] = sess
 	s.mu.Unlock()
 	go func() {

@@ -35,6 +35,7 @@ type Runtime struct {
 	Engine    *policy.CedarEngine
 	Matchers  []policy.Matcher
 	Rates     *policy.RateCounter
+	Slots     gate.ApprovalSlots
 	Telemetry *observe.Telemetry
 	Logger    *slog.Logger
 }
@@ -81,7 +82,8 @@ func LoadPolicy(cfg *config.Config) (*policy.CedarEngine, []policy.Matcher, erro
 
 // Open builds a Runtime for wrap/serve.
 func Open(ctx context.Context, cfg *config.Config, logger *slog.Logger, version string) (*Runtime, error) {
-	r := &Runtime{Config: cfg, Logger: logger, Rates: policy.NewRateCounter()}
+	r := &Runtime{Config: cfg, Logger: logger, Rates: policy.NewRateCounter(),
+		Slots: gate.NewApprovalSlots(cfg.Approval.MaxPending)}
 	var err error
 	if r.Engine, r.Matchers, err = LoadPolicy(cfg); err != nil {
 		return nil, err
@@ -115,7 +117,7 @@ func (r *Runtime) Deps() gate.Deps {
 		Policy: r.Engine, Matchers: r.Matchers, Rates: r.Rates, Audit: r.Audit,
 		Kill: r.Kill, Pins: r.Pins, Approver: r.Approver, Telemetry: r.Telemetry,
 		Mode: r.Config.Mode, PinOnChange: r.Config.Pinning.OnChange,
-		ApprovalTimeout: r.Config.Approval.Timeout.Duration, Logger: r.Logger,
+		ApprovalTimeout: r.Config.Approval.Timeout.Duration, ApprovalSlots: r.Slots, Logger: r.Logger,
 	}
 }
 

@@ -53,6 +53,9 @@ func (c *Config) Validate() error {
 	if c.Approval.Timeout.Duration < time.Second || c.Approval.Timeout.Duration > 24*time.Hour {
 		add("approval.timeout: must be between 1s and 24h (got %s)", c.Approval.Timeout)
 	}
+	if c.Approval.MaxPending < 1 {
+		add("approval.max_pending: must be at least 1")
+	}
 	if c.Pinning.OnChange != PinBlock && c.Pinning.OnChange != PinAlert {
 		add("pinning.on_change: must be %q or %q (got %q)", PinBlock, PinAlert, c.Pinning.OnChange)
 	}
@@ -90,6 +93,9 @@ func (c *Config) validateHTTP(add func(string, ...any)) {
 	}
 	if c.HTTP.MaxBodyBytes < 1024 {
 		add("http.max_body_bytes: must be at least 1024")
+	}
+	if c.HTTP.MaxSessions < 1 || c.HTTP.MaxSessionsPerAgent < 1 {
+		add("http.max_sessions and http.max_sessions_per_agent: must be at least 1")
 	}
 	for i, a := range c.HTTP.Agents {
 		if a.Name == "" || a.TokenSHA256 == "" {
