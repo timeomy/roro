@@ -29,7 +29,7 @@ func scanEvent(row interface{ Scan(...any) error }) (Event, error) {
 	return e, nil
 }
 
-// Filter selects events for `tollgate logs`.
+// Filter selects events for `roro logs`.
 type Filter struct {
 	Agent    string
 	Tool     string

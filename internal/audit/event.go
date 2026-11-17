@@ -1,9 +1,9 @@
-// Package audit implements Tollgate's tamper-evident audit log.
+// Package audit implements Roro's tamper-evident audit log.
 //
 // Every event is a row in an append-only SQLite table. Each row stores the
 // SHA-256 hash of its own canonical encoding, and that encoding includes the
 // previous row's hash, forming a hash chain. Periodically the latest hash is
-// signed with an Ed25519 key kept outside the log (a checkpoint). `tollgate
+// signed with an Ed25519 key kept outside the log (a checkpoint). `roro
 // verify` recomputes the chain and checks every checkpoint signature.
 package audit
 
@@ -18,7 +18,7 @@ import (
 const GenesisHash = "0000000000000000000000000000000000000000000000000000000000000000"
 
 // hashDomain versions the canonical encoding.
-const hashDomain = "tollgate/audit/event/v1"
+const hashDomain = "roro/audit/event/v1"
 
 // Event kinds.
 const (
@@ -95,7 +95,7 @@ type Checkpoint struct {
 	Signature string    `json:"signature"` // hex Ed25519 signature
 }
 
-const checkpointDomain = "tollgate/audit/checkpoint/v1"
+const checkpointDomain = "roro/audit/checkpoint/v1"
 
 // SignedMessage returns the bytes a checkpoint signature covers.
 func (c Checkpoint) SignedMessage() []byte {

@@ -15,8 +15,8 @@ import (
 
 // upstreamProcess is a child MCP server reached over its stdin/stdout.
 //
-// Tollgate manages the process itself instead of using mcp.CommandTransport
-// so it can half-close: when the client disconnects, Tollgate closes the
+// Roro manages the process itself instead of using mcp.CommandTransport
+// so it can half-close: when the client disconnects, Roro closes the
 // child's stdin but keeps reading its stdout, so responses already in flight
 // still reach the client before shutdown.
 type upstreamProcess struct {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 
-	"github.com/timeomy/tollgate/internal/identity"
+	"github.com/timeomy/roro/internal/identity"
 )
 
 // errSessionClosed is returned to requests waiting on a closed session.
@@ -144,7 +144,7 @@ func (s *httpSession) answerServerRequest(req *jsonrpc.Request) {
 		resp.Result = json.RawMessage(`{}`)
 	} else {
 		resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeMethodNotFound,
-			Message: "tollgate HTTP mode does not relay server-initiated requests (" + req.Method + ")"}
+			Message: "roro HTTP mode does not relay server-initiated requests (" + req.Method + ")"}
 	}
 	_ = s.backend.Upstream.Write(s.ctx, resp)
 }

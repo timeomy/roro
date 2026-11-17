@@ -1,18 +1,18 @@
-# Writing Tollgate policy
+# Writing Roro policy
 
-Tollgate authorizes every `tools/call` with [Cedar](https://www.cedarpolicy.com/)
+Roro authorizes every `tools/call` with [Cedar](https://www.cedarpolicy.com/)
 policies (via the official [cedar-go](https://github.com/cedar-policy/cedar-go)
-library). Policy files are listed under `policy.files` in `tollgate.yaml`.
-`tollgate init` writes a commented starter policy; `tollgate check` validates
+library). Policy files are listed under `policy.files` in `roro.yaml`.
+`roro init` writes a commented starter policy; `roro check` validates
 config and policy without proxying.
 
 ## Entity model
 
-| Cedar element | Tollgate meaning |
+| Cedar element | Roro meaning |
 |---|---|
-| `principal` | `Tollgate::Agent::"<name>"` with attributes `name`, `client`, `owner` |
-| `action` | `Tollgate::Action::"call_tool"` |
-| `resource` | `Tollgate::Tool::"<tool name>"` with attributes `name`, `server`, `args`, `paths`, `hosts` |
+| `principal` | `Roro::Agent::"<name>"` with attributes `name`, `client`, `owner` |
+| `action` | `Roro::Action::"call_tool"` |
+| `resource` | `Roro::Tool::"<tool name>"` with attributes `name`, `server`, `args`, `paths`, `hosts` |
 | `context` | `now` (Unix seconds), `kill_switch`, `pin_status`, `rate.agent_calls_per_minute`, `rate.tool_calls_per_minute`, `matches.<matcher>` |
 
 - `resource.args` is the tool's arguments converted to Cedar values: strings,
@@ -29,16 +29,16 @@ config and policy without proxying.
   `http`, `https`, `ws`, or `wss` URL: the lowercase hostname, trailing dot
   removed. `https://api.github.com@evil.example/` yields `evil.example`.
 - `context.pin_status` is `pinned`, `changed`, or `unknown` (never listed
-  through Tollgate).
+  through Roro).
 - `context.rate.*` count attempts (allowed or not) in the last 60 seconds,
   including the current call, for this agent and for this agent + tool.
-  Counters are per Tollgate process.
+  Counters are per Roro process.
 - `context.matches.<name>` is `true` if the named matcher (configured in
-  `tollgate.yaml`) matched any string anywhere in the arguments.
+  `roro.yaml`) matched any string anywhere in the arguments.
 
 ## Outcomes
 
-Cedar itself only says permit or forbid. Tollgate derives three outcomes:
+Cedar itself only says permit or forbid. Roro derives three outcomes:
 
 | Situation | Outcome | Reason code |
 |---|---|---|
@@ -49,12 +49,12 @@ Cedar itself only says permit or forbid. Tollgate derives three outcomes:
 | a `forbid` fails to evaluate (e.g. missing attribute) | deny | `policy_evaluation_error` |
 
 **Design choice: annotation.** `require_approval` is a `permit` annotated with
-`@approval`. At load time Tollgate splits policies into an "unattended" set
+`@approval`. At load time Roro splits policies into an "unattended" set
 (everything without `@approval`) and an "approval" set (`@approval` permits
 plus all forbids). This keeps one action, one entity model, and Cedar's rule
 that forbids always win. `@approval` on a `forbid` is a load error.
 
-Annotations Tollgate reads:
+Annotations Roro reads:
 
 - `@id("name")`: the policy id shown in audit events (default `file.cedar:N`).
   Must be unique.
@@ -65,7 +65,7 @@ Annotations Tollgate reads:
 ## Approval
 
 A `require_approval` call is queued and waits up to `approval.timeout`. A
-human answers with `tollgate approvals watch` (interactive), or `approvals
+human answers with `roro approvals watch` (interactive), or `approvals
 list` + `approvals approve|deny ID`. No answer means deny
 (`approval_timeout`). If the client cancels the request
 (`notifications/cancelled`) or disconnects, the wait stops
@@ -123,7 +123,7 @@ when { resource.name == "search" && (!(resource.args has limit) || resource.args
 Per-agent rule:
 
 ```cedar
-permit (principal == Tollgate::Agent::"ops-bot", action, resource)
+permit (principal == Roro::Agent::"ops-bot", action, resource)
 when { resource.name == "restart_service" && resource.server == "ops" };
 ```
 
@@ -136,7 +136,7 @@ forbid (principal, action, resource)
 when { resource.name like "*write*" && context.rate.tool_calls_per_minute > 5 };
 ```
 
-Secrets in arguments (matchers are defined in `tollgate.yaml`; use `has` so
+Secrets in arguments (matchers are defined in `roro.yaml`; use `has` so
 the policy keeps working if a matcher is removed):
 
 ```cedar

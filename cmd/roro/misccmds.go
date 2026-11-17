@@ -7,17 +7,17 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/timeomy/tollgate/internal/app"
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/identity"
-	"github.com/timeomy/tollgate/internal/pin"
+	"github.com/timeomy/roro/internal/app"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/identity"
+	"github.com/timeomy/roro/internal/pin"
 )
 
 func newPinsCmd(root *rootFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pins",
 		Short: "Review pinned tool definitions",
-		Long: `Tollgate pins each tool's name, description, and schemas the first time it is
+		Long: `Roro pins each tool's name, description, and schemas the first time it is
 listed. A later change marks the tool "changed"; with pinning.on_change: block
 it is hidden and its calls are denied until you accept the new definition.`,
 	}
@@ -88,8 +88,8 @@ func newTokenCmd() *cobra.Command {
 		Use:   "new --agent NAME",
 		Short: "Create a bearer token for an HTTP agent",
 		Long: `new prints a fresh random token and the config entry for it. Give the token
-to the agent's MCP client; put only the token_sha256 line in tollgate.yaml.
-The token is shown once and is not stored anywhere by Tollgate.`,
+to the agent's MCP client; put only the token_sha256 line in roro.yaml.
+The token is shown once and is not stored anywhere by Roro.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := (identity.Agent{Name: agent}).Validate(); err != nil {
@@ -101,7 +101,7 @@ The token is shown once and is not stored anywhere by Tollgate.`,
 			}
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "token (give to the client, shown once):\n  %s\n\n", token)
-			fmt.Fprintf(out, "add to tollgate.yaml under http.agents:\n  - name: %s\n    token_sha256: %s\n", agent, digest)
+			fmt.Fprintf(out, "add to roro.yaml under http.agents:\n  - name: %s\n    token_sha256: %s\n", agent, digest)
 			return nil
 		},
 	}

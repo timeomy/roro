@@ -49,7 +49,7 @@ func TestToolCallSpanAndMetrics(t *testing.T) {
 	ctx := t.Context()
 	ctx, s := tel.StartToolCall(ctx, CallInfo{Tool: "exfiltrate", Agent: "research-bot", Server: "demo", RequestID: "7", Transport: TransportPipe})
 	s.Decide(ctx, "deny", "dangerous_tool_blocked", []string{"deny-dangerous-tools"}, "")
-	s.End(ctx, "tollgate.dangerous_tool_blocked", "blocked")
+	s.End(ctx, "roro.dangerous_tool_blocked", "blocked")
 
 	spans := rec.Ended()
 	if len(spans) != 1 {
@@ -66,7 +66,7 @@ func TestToolCallSpanAndMetrics(t *testing.T) {
 	want := map[attribute.Key]string{
 		AttrMCPMethodName: "tools/call", AttrGenAIOperationName: "execute_tool", AttrGenAIToolName: "exfiltrate",
 		AttrGenAIAgentName: "research-bot", AttrJSONRPCRequestID: "7", AttrNetworkTransport: "pipe",
-		AttrDecision: "deny", AttrReason: "dangerous_tool_blocked", AttrErrorType: "tollgate.dangerous_tool_blocked",
+		AttrDecision: "deny", AttrReason: "dangerous_tool_blocked", AttrErrorType: "roro.dangerous_tool_blocked",
 	}
 	for k, v := range want {
 		if got[k] != v {
@@ -100,7 +100,7 @@ func TestSetupDisabledAndOTLP(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Exporters are created lazily; no collector needs to be running.
-	on, err := Setup(t.Context(), Config{Endpoint: "127.0.0.1:1", Insecure: true, ServiceName: "tollgate", Version: "test"})
+	on, err := Setup(t.Context(), Config{Endpoint: "127.0.0.1:1", Insecure: true, ServiceName: "roro", Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}

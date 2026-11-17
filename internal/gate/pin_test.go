@@ -6,9 +6,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/config"
-	"github.com/timeomy/tollgate/internal/policy"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/config"
+	"github.com/timeomy/roro/internal/policy"
 )
 
 func (e *env) listTools(tools ...map[string]any) []string {

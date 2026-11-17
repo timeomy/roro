@@ -23,7 +23,7 @@ type Report struct {
 	Anchor string
 	// Unsealed counts events after the last checkpoint. They are covered by
 	// the hash chain but not yet by a signature, so deleting them would not
-	// be detected. Tollgate checkpoints on clean shutdown to keep this at 0.
+	// be detected. Roro checkpoints on clean shutdown to keep this at 0.
 	Unsealed int64
 	Problems []string
 }

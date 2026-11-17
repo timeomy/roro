@@ -13,14 +13,14 @@ import (
 
 // Cedar entity model (see docs/policy.md):
 //
-//	principal  Tollgate::Agent::"<agent>"    {name, client, owner}
-//	action     Tollgate::Action::"call_tool"
-//	resource   Tollgate::Tool::"<tool>"      {name, server, args, paths, hosts}
+//	principal  Roro::Agent::"<agent>"    {name, client, owner}
+//	action     Roro::Action::"call_tool"
+//	resource   Roro::Tool::"<tool>"      {name, server, args, paths, hosts}
 //	context    {now, kill_switch, pin_status, rate{...}, matches{...}}
 const (
-	EntityAgent  = "Tollgate::Agent"
-	EntityAction = "Tollgate::Action"
-	EntityTool   = "Tollgate::Tool"
+	EntityAgent  = "Roro::Agent"
+	EntityAction = "Roro::Action"
+	EntityTool   = "Roro::Tool"
 	ActionCall   = "call_tool"
 )
 
@@ -167,7 +167,7 @@ func truncateNum(s string) string {
 // derivedPaths exposes cleaned forms of top-level string arguments that look
 // like filesystem paths. Cleaning resolves "." and ".." lexically, so
 // "/sandbox/../etc/passwd" becomes "/etc/passwd" and cannot satisfy
-// `like "/sandbox/*"`. Symlinks are not resolved (Tollgate does not see the
+// `like "/sandbox/*"`. Symlinks are not resolved (Roro does not see the
 // upstream's filesystem); see docs/threat-model.md.
 func derivedPaths(args map[string]any) cedar.Record {
 	rm := cedar.RecordMap{}

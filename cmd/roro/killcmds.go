@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/timeomy/tollgate/internal/app"
-	"github.com/timeomy/tollgate/internal/approval"
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/identity"
-	"github.com/timeomy/tollgate/internal/killswitch"
-	"github.com/timeomy/tollgate/internal/pin"
+	"github.com/timeomy/roro/internal/app"
+	"github.com/timeomy/roro/internal/approval"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/identity"
+	"github.com/timeomy/roro/internal/killswitch"
+	"github.com/timeomy/roro/internal/pin"
 )
 
 func newKillCmd(root *rootFlags) *cobra.Command {
@@ -30,14 +30,14 @@ func switchCmd(root *rootFlags, kill bool) *cobra.Command {
 Resuming the global switch does not clear per-agent switches. The resume is
 recorded in the audit log.`
 	if kill {
-		use, short, long = "kill", "Stop all tool calls, globally or for one agent", `kill activates the kill switch. Every running Tollgate process that shares
+		use, short, long = "kill", "Stop all tool calls, globally or for one agent", `kill activates the kill switch. Every running Roro process that shares
 this state directory denies the next tool call (reason kill_switch_active),
-and the switch survives restarts until "tollgate resume". The kill is
+and the switch survives restarts until "roro resume". The kill is
 recorded and checkpointed in the audit log.`
 	}
 	cmd := &cobra.Command{
 		Use: use, Short: short, Long: long, Args: cobra.NoArgs,
-		Example: fmt.Sprintf("  tollgate %s\n  tollgate %s --agent research-bot --reason \"investigating\"", use, use),
+		Example: fmt.Sprintf("  roro %s\n  roro %s --agent research-bot --reason \"investigating\"", use, use),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if agent != "" {
 				if err := (identity.Agent{Name: agent}).Validate(); err != nil {

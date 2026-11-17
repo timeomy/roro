@@ -3,7 +3,7 @@
 //
 // The relay works at the JSON-RPC message level rather than by re-implementing
 // an MCP server: every request, response, and notification is forwarded as-is,
-// so capabilities Tollgate does not know about (resources, prompts, sampling,
+// so capabilities Roro does not know about (resources, prompts, sampling,
 // elicitation, future methods) keep working. Later milestones intercept
 // selected methods (for example tools/call) before they reach the upstream.
 package proxy
@@ -26,7 +26,7 @@ import (
 var ErrUpstreamClosed = errors.New("upstream MCP server closed the connection")
 
 // Relay forwards messages between Client (the MCP client that connected to
-// Tollgate) and Upstream (the real MCP server).
+// Roro) and Upstream (the real MCP server).
 type Relay struct {
 	Client   mcp.Connection
 	Upstream mcp.Connection

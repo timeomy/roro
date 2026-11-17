@@ -3,7 +3,7 @@
 // it performs exactly the tool calls a model obeying the injection would make,
 // so the demo is deterministic.
 //
-//	demo-agent --sandbox DIR -- tollgate --config ... wrap --agent research-bot -- demo-exfil-server
+//	demo-agent --sandbox DIR -- roro --config ... wrap --agent research-bot -- demo-exfil-server
 package main
 
 import (

@@ -28,7 +28,7 @@ func TestParseAppliesDefaultsAndResolvesPaths(t *testing.T) {
 	if cfg.Approval.Timeout.Duration != 2*time.Minute {
 		t.Errorf("approval timeout = %s", cfg.Approval.Timeout)
 	}
-	if want := filepath.Join(dir, ".tollgate", "audit.db"); cfg.Audit.Path != want {
+	if want := filepath.Join(dir, ".roro", "audit.db"); cfg.Audit.Path != want {
 		t.Errorf("audit path = %q, want %q", cfg.Audit.Path, want)
 	}
 	if cfg.Policy.Files[0] != filepath.Join(dir, "p.cedar") {
@@ -71,7 +71,7 @@ func TestParseFailsClosed(t *testing.T) {
 func TestLoadReportsPath(t *testing.T) {
 	dir := t.TempDir()
 	writePolicy(t, dir)
-	p := filepath.Join(dir, "tollgate.yaml")
+	p := filepath.Join(dir, "roro.yaml")
 	if err := os.WriteFile(p, []byte("version: 1\nmode: monitor\npolicy: {files: [p.cedar]}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

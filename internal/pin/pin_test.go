@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 func newStore(t *testing.T) *Store {

@@ -32,13 +32,13 @@ const (
 	MetricServerOperationDuration = "mcp.server.operation.duration" // histogram, seconds
 )
 
-// Tollgate-specific attributes and metrics (not part of semantic conventions).
+// Roro-specific attributes and metrics (not part of semantic conventions).
 const (
-	AttrDecision   = "tollgate.decision"
-	AttrReason     = "tollgate.reason"
-	AttrPolicyIDs  = "tollgate.policy_ids"
-	AttrServer     = "tollgate.server"
-	AttrApprovalID = "tollgate.approval_id"
+	AttrDecision   = "roro.decision"
+	AttrReason     = "roro.reason"
+	AttrPolicyIDs  = "roro.policy_ids"
+	AttrServer     = "roro.server"
+	AttrApprovalID = "roro.approval_id"
 
-	MetricDecisions = "tollgate.decisions" // counter
+	MetricDecisions = "roro.decisions" // counter
 )

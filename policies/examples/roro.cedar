@@ -1,9 +1,9 @@
-// Tollgate starter policy.
+// Roro starter policy.
 //
 // Entity model:
-//   principal  Tollgate::Agent::"<name>"      attrs: name, client, owner
-//   action     Tollgate::Action::"call_tool"
-//   resource   Tollgate::Tool::"<tool name>"  attrs: name, server, args, paths, hosts
+//   principal  Roro::Agent::"<name>"      attrs: name, client, owner
+//   action     Roro::Action::"call_tool"
+//   resource   Roro::Tool::"<tool name>"  attrs: name, server, args, paths, hosts
 //   context    now, kill_switch, pin_status, rate.{agent,tool}_calls_per_minute,
 //              matches.<matcher name>
 //
@@ -18,11 +18,11 @@
 //   - a plain permit matches          -> allow
 //   - only an @approval permit matches -> require_approval (human decides)
 //
-// `tollgate init --sandbox DIR` replaces /sandbox below with your directory.
+// `roro init --sandbox DIR` replaces /sandbox below with your directory.
 
 // ---------------------------------------------------------------- safety nets
 
-// The kill switch is also enforced in Tollgate's code before policy runs;
+// The kill switch is also enforced in Roro's code before policy runs;
 // this rule documents it and keeps policy-only evaluation honest.
 @id("kill-switch")
 @reason("kill_switch_active")
@@ -54,10 +54,10 @@ when {
   resource.name like "*exfil*" ||
   resource.name like "*send_email*"
 }
-unless { principal == Tollgate::Agent::"ops-bot" && resource.name == "run_shell" };
+unless { principal == Roro::Agent::"ops-bot" && resource.name == "run_shell" };
 
 // Arguments that carry credentials never leave through a tool call.
-// The matcher names are defined under `matchers:` in tollgate.yaml.
+// The matcher names are defined under `matchers:` in roro.yaml.
 @id("deny-secrets-in-args")
 @reason("secret_in_arguments")
 forbid (principal, action, resource)

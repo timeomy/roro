@@ -86,12 +86,12 @@ func TestRelayForwardsToolsListAndCall(t *testing.T) {
 
 	res, err := h.session.CallTool(ctx, &mcp.CallToolParams{
 		Name:      "echo",
-		Arguments: map[string]any{"text": "hello through tollgate"},
+		Arguments: map[string]any{"text": "hello through roro"},
 	})
 	if err != nil {
 		t.Fatalf("CallTool: %v", err)
 	}
-	want := map[string]any{"text": "hello through tollgate"}
+	want := map[string]any{"text": "hello through roro"}
 	if diff := cmp.Diff(want, res.StructuredContent); diff != "" {
 		t.Errorf("structured content mismatch (-want +got):\n%s", diff)
 	}

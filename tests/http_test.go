@@ -39,7 +39,7 @@ func freePort(t *testing.T) string {
 
 func TestStreamableHTTPServe(t *testing.T) {
 	probe := newWorkspace(t)
-	out := probe.tollgate("token", "new", "--agent", "http-bot")
+	out := probe.roro("token", "new", "--agent", "http-bot")
 	token, digest := tokenLine.FindStringSubmatch(out), digestLine.FindStringSubmatch(out)
 	if token == nil || digest == nil {
 		t.Fatalf("token output:\n%s", out)
@@ -52,7 +52,7 @@ func TestStreamableHTTPServe(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	srv := exec.CommandContext(ctx, bins.tollgate, "--config", w.config, "serve", "--", bins.exfil)
+	srv := exec.CommandContext(ctx, bins.roro, "--config", w.config, "serve", "--", bins.exfil)
 	srv.Env = append(srv.Environ(), "DEMO_EXFIL_LOG="+w.exfil)
 	stderr, _ := srv.StderrPipe()
 	if err := srv.Start(); err != nil {
@@ -90,7 +90,7 @@ func TestStreamableHTTPServe(t *testing.T) {
 	res := call(t, session, "http_post", map[string]any{"url": "https://api.github.com/x", "body": "ok"})
 	requireAllowed(t, res)
 
-	logs := w.tollgate("logs", "--agent", "http-bot")
+	logs := w.roro("logs", "--agent", "http-bot")
 	if !strings.Contains(logs, "dangerous_tool_blocked") || !strings.Contains(logs, "http_post") {
 		t.Fatalf("logs:\n%s", logs)
 	}

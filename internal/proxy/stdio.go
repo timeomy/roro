@@ -12,7 +12,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// DefaultTerminateGrace is how long Tollgate waits after closing the
+// DefaultTerminateGrace is how long Roro waits after closing the
 // upstream's stdin before signalling it to stop, and again before killing it.
 // It also bounds how long in-flight upstream responses are drained after the
 // client disconnects.
@@ -31,7 +31,7 @@ type StdioOptions struct {
 
 	// UpstreamStderr receives the upstream server's stderr. Default: os.Stderr,
 	// so MCP hosts that capture server logs (Claude Desktop, Cursor) still see
-	// them. Tollgate never writes upstream stderr to stdout.
+	// them. Roro never writes upstream stderr to stdout.
 	UpstreamStderr io.Writer
 
 	// TerminateGrace overrides DefaultTerminateGrace when positive.

@@ -1,4 +1,4 @@
-// Package gate is Tollgate's policy enforcement point. A Session sits on one
+// Package gate is Roro's policy enforcement point. A Session sits on one
 // client<->upstream connection and inspects the JSON-RPC traffic:
 //
 //   - tools/call requests run the decision pipeline (kill switch, pinning,
@@ -18,14 +18,14 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 
-	"github.com/timeomy/tollgate/internal/approval"
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/config"
-	"github.com/timeomy/tollgate/internal/identity"
-	"github.com/timeomy/tollgate/internal/killswitch"
-	"github.com/timeomy/tollgate/internal/observe"
-	"github.com/timeomy/tollgate/internal/pin"
-	"github.com/timeomy/tollgate/internal/policy"
+	"github.com/timeomy/roro/internal/approval"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/config"
+	"github.com/timeomy/roro/internal/identity"
+	"github.com/timeomy/roro/internal/killswitch"
+	"github.com/timeomy/roro/internal/observe"
+	"github.com/timeomy/roro/internal/pin"
+	"github.com/timeomy/roro/internal/policy"
 )
 
 // KillChecker reports kill switch state.
@@ -179,7 +179,7 @@ func (s *Session) FromClient(ctx context.Context, msg jsonrpc.Message) (toUpstre
 			return nil, nil
 		}
 		return nil, &jsonrpc.Response{ID: req.ID, Error: &jsonrpc.Error{
-			Code: jsonrpc.CodeMethodNotFound, Message: "tollgate: unknown method " + truncate(req.Method, 64)}}
+			Code: jsonrpc.CodeMethodNotFound, Message: "roro: unknown method " + truncate(req.Method, 64)}}
 	}
 	if req.Method == "notifications/cancelled" {
 		s.cancelApproval(req)
@@ -214,11 +214,11 @@ func (s *Session) track(req *jsonrpc.Request) *jsonrpc.Response {
 	defer s.mu.Unlock()
 	if _, dup := s.inflight[key]; dup {
 		return &jsonrpc.Response{ID: req.ID, Error: &jsonrpc.Error{
-			Code: jsonrpc.CodeInvalidRequest, Message: "tollgate: request id is already in use by an unanswered request"}}
+			Code: jsonrpc.CodeInvalidRequest, Message: "roro: request id is already in use by an unanswered request"}}
 	}
 	if len(s.inflight) >= maxInflight {
 		return &jsonrpc.Response{ID: req.ID, Error: &jsonrpc.Error{
-			Code: jsonrpc.CodeInvalidRequest, Message: "tollgate: too many unanswered requests on this session"}}
+			Code: jsonrpc.CodeInvalidRequest, Message: "roro: too many unanswered requests on this session"}}
 	}
 	s.inflight[key] = &inflightReq{method: req.Method}
 	return nil
@@ -278,7 +278,7 @@ func (s *Session) Close() {
 		c()
 	}
 	for _, c := range calls {
-		c.span.End(context.Background(), "tollgate.session_closed", "session closed before upstream answered")
+		c.span.End(context.Background(), "roro.session_closed", "session closed before upstream answered")
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 // TestPassThroughMatchesDirect runs the same MCP calls directly against the
-// echo server and through `tollgate wrap` with the starter policy, and
+// echo server and through `roro wrap` with the starter policy, and
 // requires identical results for allowed calls.
 func TestPassThroughMatchesDirect(t *testing.T) {
 	w := newWorkspace(t)
@@ -70,7 +70,7 @@ func TestWrapFailsClosed(t *testing.T) {
 	}
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {
-			out, err := exec.CommandContext(ctx, bins.tollgate, args...).CombinedOutput()
+			out, err := exec.CommandContext(ctx, bins.roro, args...).CombinedOutput()
 			if err == nil {
 				t.Fatalf("wrap succeeded; output:\n%s", out)
 			}

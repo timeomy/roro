@@ -13,15 +13,15 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
-	"github.com/timeomy/tollgate/internal/approval"
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/config"
-	"github.com/timeomy/tollgate/internal/identity"
-	"github.com/timeomy/tollgate/internal/killswitch"
-	"github.com/timeomy/tollgate/internal/observe"
-	"github.com/timeomy/tollgate/internal/pin"
-	"github.com/timeomy/tollgate/internal/policy"
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/approval"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/config"
+	"github.com/timeomy/roro/internal/identity"
+	"github.com/timeomy/roro/internal/killswitch"
+	"github.com/timeomy/roro/internal/observe"
+	"github.com/timeomy/roro/internal/pin"
+	"github.com/timeomy/roro/internal/policy"
+	"github.com/timeomy/roro/internal/store"
 )
 
 type env struct {
@@ -63,7 +63,7 @@ func newEnv(t *testing.T, mutate ...func(*Deps)) *env {
 	m1, _ := policy.NewMatcher("aws_access_key", `\b(AKIA|ASIA)[0-9A-Z]{16}\b`)
 	m2, _ := policy.NewMatcher("private_key_block", `-----BEGIN [A-Z ]*PRIVATE KEY-----`)
 	matchers := []policy.Matcher{m1, m2}
-	engine, err := policy.LoadCedar([]string{"../../policies/examples/tollgate.cedar"}, policy.MatcherNames(matchers))
+	engine, err := policy.LoadCedar([]string{"../../policies/examples/roro.cedar"}, policy.MatcherNames(matchers))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,6 @@
 # Architecture
 
-Tollgate is a policy enforcement point for MCP tool calls. It is a single Go
+Roro is a policy enforcement point for MCP tool calls. It is a single Go
 binary that sits between an MCP client and an upstream MCP server. It is not a
 model runtime, a prompt filter, or a container orchestrator.
 
@@ -9,7 +9,7 @@ MCP client (Claude Desktop, Cursor, custom agent)
         |  MCP over stdio (wrap) or streamable HTTP (serve)
         v
 +--------------------------------------------------------------------+
-| Tollgate                                                           |
+| Roro                                                           |
 |  proxy    relay JSON-RPC messages; only tools/call and the         |
 |           tools/list response are inspected, all else passes       |
 |  gate     per-connection Session:                                  |
@@ -34,7 +34,7 @@ Upstream MCP server
 
 | Package | Responsibility |
 |---|---|
-| `cmd/tollgate` | CLI (cobra). Help text is part of the product. |
+| `cmd/roro` | CLI (cobra). Help text is part of the product. |
 | `internal/proxy` | Message relay (stdio), streamable HTTP server, child process lifecycle. Knows nothing about policy; calls an `Interceptor`. |
 | `internal/gate` | The enforcement pipeline. Implements `proxy.Interceptor`. |
 | `internal/policy` | `Engine` interface; `CedarEngine`; entity mapping; matchers; rate counter. |
@@ -45,7 +45,7 @@ Upstream MCP server
 | `internal/redact` | Secret redaction for logs, approvals, telemetry. |
 | `internal/observe` | OpenTelemetry spans and metrics. |
 | `internal/identity` | Agent principals and the bearer-token directory. |
-| `internal/config` | Strict `tollgate.yaml` loading. |
+| `internal/config` | Strict `roro.yaml` loading. |
 | `internal/app` | Assembles components from config; fail-closed startup. |
 | `internal/store` | SQLite open helper (pure-Go driver, immediate transactions). |
 
@@ -55,29 +55,29 @@ Telegram), `audit.Log`.
 
 ## Proxy model
 
-Tollgate relays MCP at the JSON-RPC message level. It does not run its own MCP
+Roro relays MCP at the JSON-RPC message level. It does not run its own MCP
 server that re-exports upstream tools. Methods it does not inspect
 (resources, prompts, sampling, elicitation, logging, future additions) keep
 working unchanged in stdio mode.
 
 Framing and message types come from the official MCP Go SDK
 (`mcp.IOTransport`, `jsonrpc.Message`). The relay loop, HTTP endpoint,
-process handling, and every enforcement component are Tollgate's own.
+process handling, and every enforcement component are Roro's own.
 
 `tools/call` requests may wait for a human, so the relay handles each on its
 own goroutine; all other messages are handled in order, so `initialize`
 always precedes `notifications/initialized` upstream.
 
-### stdio (`tollgate wrap`)
+### stdio (`roro wrap`)
 
 `wrap -- CMD ARGS...` starts `CMD` with piped stdin/stdout and passes its
 stderr through. Shutdown follows the MCP stdio guidance: when the client
-closes Tollgate's stdin, Tollgate closes the child's stdin (half-close),
+closes Roro's stdin, Roro closes the child's stdin (half-close),
 keeps forwarding its output for a grace period so in-flight responses arrive,
 then signals and finally kills it. The SDK's `CommandTransport` closes both
-directions at once, so Tollgate manages the process itself.
+directions at once, so Roro manages the process itself.
 
-### Streamable HTTP (`tollgate serve`)
+### Streamable HTTP (`roro serve`)
 
 A small, original implementation of the server side of the MCP streamable
 HTTP transport at `/mcp`:
@@ -100,7 +100,7 @@ HTTP transport at `/mcp`:
   agent's session state never leaks into another's.
 
 The SDK's `StreamableHTTPHandler` is built around the SDK's own `Server`
-type, which Tollgate does not use, so Tollgate implements the handler.
+type, which Roro does not use, so Roro implements the handler.
 
 ## Audit log
 
@@ -111,14 +111,14 @@ type, which Tollgate does not use, so Tollgate implements the handler.
   length-prefixed (`<len>:<bytes>\n`). It includes `prev_hash`; the first
   event's `prev_hash` is 64 zeros (`audit.GenesisHash`).
 - Appends run in a `BEGIN IMMEDIATE` transaction that reads the chain head
-  and inserts, so concurrent Tollgate processes cannot fork the chain.
+  and inserts, so concurrent Roro processes cannot fork the chain.
 - Table `checkpoints`: every `audit.checkpoint_every` events, on clean
-  shutdown, and on kill/resume, Tollgate signs
-  `tollgate/audit/checkpoint/v1 \n seq \n entry_hash \n ts \n key_id` with
-  Ed25519. The key lives outside the log (`.tollgate/audit-signing.key`,
-  mode 0600); `init` creates it and Tollgate never creates one implicitly.
-- `tollgate verify` needs only the public key and never writes. The spec
-  asked for a checkpoint "on verify"; Tollgate deliberately does not, so an
+  shutdown, and on kill/resume, Roro signs
+  `roro/audit/checkpoint/v1 \n seq \n entry_hash \n ts \n key_id` with
+  Ed25519. The key lives outside the log (`.roro/audit-signing.key`,
+  mode 0600); `init` creates it and Roro never creates one implicitly.
+- `roro verify` needs only the public key and never writes. The spec
+  asked for a checkpoint "on verify"; Roro deliberately does not, so an
   auditor can verify a read-only copy with only the public key.
 - Arguments are stored only as a redacted preview (512 bytes) and the
   SHA-256 of the full redacted JSON. Results are stored only as a SHA-256
@@ -127,7 +127,7 @@ type, which Tollgate does not use, so Tollgate implements the handler.
 
 ## Identity
 
-stdio: one agent per `wrap` process, from `--agent`, `$TOLLGATE_AGENT`, or
+stdio: one agent per `wrap` process, from `--agent`, `$RORO_AGENT`, or
 `agent.name`. Run separate `wrap` entries (with different `--agent`) for
 different clients. The stdio identity is asserted by whoever configures the
 MCP client; it is as trustworthy as that config file.
@@ -136,14 +136,14 @@ HTTP: the bearer token determines the agent.
 
 ## Inspiration and differences
 
-Tollgate's code is original. Ideas it shares with other projects:
+Roro's code is original. Ideas it shares with other projects:
 
 - **Tool pinning** follows the "tool poisoning / rug pull" defence popularised
   by Invariant Labs' mcp-scan (now Snyk agent-scan): hash tool descriptions
-  and alert on change. Tollgate enforces it inline, per call, instead of as a
+  and alert on change. Roro enforces it inline, per call, instead of as a
   scan.
 - **A gateway in front of MCP servers** is the shape of Docker MCP Gateway,
-  IBM ContextForge, Lasso MCP Gateway, and agentgateway. Tollgate differs by
+  IBM ContextForge, Lasso MCP Gateway, and agentgateway. Roro differs by
   scope: one small binary focused on per-agent authorization in Cedar,
   human approval, signed audit evidence, and revocation; no container
   orchestration, registry, UI, or multi-tenant control plane.

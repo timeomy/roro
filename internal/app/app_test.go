@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/config"
-	"github.com/timeomy/tollgate/policies"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/config"
+	"github.com/timeomy/roro/policies"
 )
 
 func TestServerName(t *testing.T) {

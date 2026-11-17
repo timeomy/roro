@@ -102,7 +102,7 @@ func (c *Config) validateHTTP(add func(string, ...any)) {
 			add("http.agents[%d]: name and token_sha256 are required", i)
 		}
 		if strings.HasPrefix(a.TokenSHA256, "tgk_") {
-			add("http.agents[%d].token_sha256: looks like a raw token; store only its SHA-256 (see `tollgate token new`)", i)
+			add("http.agents[%d].token_sha256: looks like a raw token; store only its SHA-256 (see `roro token new`)", i)
 		}
 	}
 	if t := c.HTTP.TLS; t != nil && (t.CertFile == "" || t.KeyFile == "") {
@@ -112,7 +112,7 @@ func (c *Config) validateHTTP(add func(string, ...any)) {
 
 func (c *Config) validateAgent() error {
 	if c.Agent.Name == "" {
-		return nil // may come from --agent / TOLLGATE_AGENT; checked at startup
+		return nil // may come from --agent / RORO_AGENT; checked at startup
 	}
 	if !regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`).MatchString(c.Agent.Name) {
 		return fmt.Errorf("agent.name: invalid agent name %q", c.Agent.Name)

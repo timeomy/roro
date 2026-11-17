@@ -2,7 +2,7 @@
 // to the audit log, shown in an approval prompt, or exported to telemetry.
 //
 // Redaction is best-effort pattern matching. It catches common token formats
-// and secret-looking keys; it cannot recognise every secret. Tollgate stores a
+// and secret-looking keys; it cannot recognise every secret. Roro stores a
 // hash of the redacted arguments, never the raw arguments.
 package redact
 
@@ -36,7 +36,7 @@ var rules = []rule{
 	{regexp.MustCompile(`\b[rs]k_(live|test)_[A-Za-z0-9]{16,}\b`), "[REDACTED:api_key]"},
 	{regexp.MustCompile(`\bxox[abprs]-[A-Za-z0-9-]{10,}`), "[REDACTED:slack_token]"},
 	{regexp.MustCompile(`\bAIza[0-9A-Za-z\-_]{35}\b`), "[REDACTED:google_api_key]"},
-	{regexp.MustCompile(`\btgk_[A-Za-z0-9]{16,}\b`), "[REDACTED:tollgate_token]"},
+	{regexp.MustCompile(`\btgk_[A-Za-z0-9]{16,}\b`), "[REDACTED:roro_token]"},
 	{regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`), "[REDACTED:jwt]"},
 	// scheme://user:password@host
 	{regexp.MustCompile(`(://[^/\s:@]+:)[^/\s@]+@`), "${1}" + Marker + "@"},

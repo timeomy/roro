@@ -11,7 +11,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/timeomy/tollgate/internal/identity"
+	"github.com/timeomy/roro/internal/identity"
 )
 
 // passInterceptor forwards everything.

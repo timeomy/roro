@@ -12,9 +12,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/timeomy/tollgate/internal/app"
-	"github.com/timeomy/tollgate/internal/approval"
-	"github.com/timeomy/tollgate/internal/redact"
+	"github.com/timeomy/roro/internal/app"
+	"github.com/timeomy/roro/internal/approval"
+	"github.com/timeomy/roro/internal/redact"
 )
 
 func newApprovalsCmd(root *rootFlags) *cobra.Command {
@@ -24,10 +24,10 @@ func newApprovalsCmd(root *rootFlags) *cobra.Command {
 		Long: `When policy marks a call require-approval, the proxy queues it and waits
 (approval.timeout; no answer means deny). Answer from any terminal:
 
-  tollgate approvals watch           prompt for each request as it arrives
-  tollgate approvals list            show pending requests
-  tollgate approvals approve ID      allow one request
-  tollgate approvals deny ID         deny one request
+  roro approvals watch           prompt for each request as it arrives
+  roro approvals list            show pending requests
+  roro approvals approve ID      allow one request
+  roro approvals deny ID         deny one request
 
 Requests show the raw tool name and arguments the agent sent (secrets
 redacted), not a model-written summary. Approve only what you would run

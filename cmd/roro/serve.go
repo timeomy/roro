@@ -12,12 +12,12 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
 
-	"github.com/timeomy/tollgate/internal/app"
-	"github.com/timeomy/tollgate/internal/config"
-	"github.com/timeomy/tollgate/internal/gate"
-	"github.com/timeomy/tollgate/internal/identity"
-	"github.com/timeomy/tollgate/internal/observe"
-	"github.com/timeomy/tollgate/internal/proxy"
+	"github.com/timeomy/roro/internal/app"
+	"github.com/timeomy/roro/internal/config"
+	"github.com/timeomy/roro/internal/gate"
+	"github.com/timeomy/roro/internal/identity"
+	"github.com/timeomy/roro/internal/observe"
+	"github.com/timeomy/roro/internal/proxy"
 )
 
 func newServeCmd(root *rootFlags) *cobra.Command {
@@ -32,7 +32,7 @@ upstream connection.
 
 Clients authenticate with "Authorization: Bearer <token>". Tokens map to
 agents under http.agents (store only token_sha256; create tokens with
-"tollgate token new"). Without any http.agents, serve refuses to start.
+"roro token new"). Without any http.agents, serve refuses to start.
 
 v0.1 answers with application/json and does not offer the optional GET event
 stream, so server-initiated requests (sampling, elicitation) are not relayed
@@ -99,7 +99,7 @@ func runServe(ctx context.Context, root *rootFlags, listen string, command []str
 
 func tokenDirectory(cfg *config.Config) (*identity.Directory, error) {
 	if len(cfg.HTTP.Agents) == 0 {
-		return nil, errors.New("serve needs at least one entry under http.agents (create a token with `tollgate token new`)")
+		return nil, errors.New("serve needs at least one entry under http.agents (create a token with `roro token new`)")
 	}
 	entries := make([]identity.TokenEntry, 0, len(cfg.HTTP.Agents))
 	for _, a := range cfg.HTTP.Agents {

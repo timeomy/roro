@@ -1,4 +1,4 @@
-// Command tollgate is a security proxy for MCP tool calls.
+// Command roro is a security proxy for MCP tool calls.
 package main
 
 import (
@@ -14,7 +14,7 @@ func main() {
 	defer stop()
 
 	if err := newRootCmd().ExecuteContext(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, "tollgate:", err)
+		fmt.Fprintln(os.Stderr, "roro:", err)
 		stop()
 		os.Exit(1)
 	}

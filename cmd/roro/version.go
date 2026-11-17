@@ -14,10 +14,10 @@ var version = "dev"
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print the Tollgate version",
+		Short: "Print the Roro version",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, err := fmt.Fprintf(cmd.OutOrStdout(), "tollgate %s (%s, %s/%s, mcp-go-sdk %s)\n",
+			_, err := fmt.Fprintf(cmd.OutOrStdout(), "roro %s (%s, %s/%s, mcp-go-sdk %s)\n",
 				version, runtime.Version(), runtime.GOOS, runtime.GOARCH, sdkVersion())
 			return err
 		},

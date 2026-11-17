@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "filesystem-via-tollgate": {
-      "command": "/usr/local/bin/tollgate",
+    "filesystem-via-roro": {
+      "command": "/usr/local/bin/roro",
       "args": [
-        "--config", "/Users/me/tollgate/tollgate.yaml",
+        "--config", "/Users/me/roro/roro.yaml",
         "wrap", "--agent", "claude-desktop", "--client", "claude-desktop",
-        "--", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/Users/me/tollgate/sandbox"
+        "--", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/Users/me/roro/sandbox"
       ]
     }
   }

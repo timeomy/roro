@@ -15,7 +15,7 @@ const maxTracked = 10000
 // sliding one-minute window. It only counts; Cedar policies compare the
 // counts to limits (context.rate.*).
 //
-// Counters live in process memory. Each Tollgate process counts its own
+// Counters live in process memory. Each Roro process counts its own
 // traffic; see docs/policy.md.
 type RateCounter struct {
 	mu        sync.Mutex

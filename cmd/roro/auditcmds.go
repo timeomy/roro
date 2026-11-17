@@ -14,8 +14,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/store"
 )
 
 // logLocation resolves the audit log and public key from flags or config.
@@ -67,7 +67,7 @@ Only the public key is needed, so an auditor can verify a copy of the log
 without access to the signing key. verify never writes to the log.
 
 Events after the last checkpoint ("unsealed") are covered by the hash chain
-but not yet by a signature; --require-sealed makes them an error. Tollgate
+but not yet by a signature; --require-sealed makes them an error. Roro
 writes a checkpoint on clean shutdown and on kill/resume.
 
 The log cannot prove on its own that it was not rolled back to an earlier
@@ -143,8 +143,8 @@ func newLogsCmd(root *rootFlags) *cobra.Command {
 		Use:   "logs",
 		Short: "Show audit events",
 		Long:  "logs prints audit events, oldest first. Arguments appear only in redacted form.",
-		Example: `  tollgate logs --decision deny
-  tollgate logs --agent research-bot --since 1h --json`,
+		Example: `  roro logs --decision deny
+  roro logs --agent research-bot --since 1h --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := loc.resolve(root, false); err != nil {

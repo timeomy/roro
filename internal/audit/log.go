@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 // Log is the audit log interface the proxy depends on.

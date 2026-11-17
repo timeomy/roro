@@ -9,12 +9,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/identity"
-	"github.com/timeomy/tollgate/policies"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/identity"
+	"github.com/timeomy/roro/policies"
 )
 
-const configTemplate = `# Tollgate configuration. Runtime wiring only: authorization rules live in
+const configTemplate = `# Roro configuration. Runtime wiring only: authorization rules live in
 # the Cedar files listed under policy.files.
 version: 1
 
@@ -23,10 +23,10 @@ version: 1
 mode: enforce
 
 # Kill switch, pins, approval queue, audit log, and signing key live here.
-state_dir: .tollgate
+state_dir: .roro
 
-# Default agent identity for "tollgate wrap". Override per MCP client with
-# --agent or $TOLLGATE_AGENT, e.g. one name for Cursor and one for Claude.
+# Default agent identity for "roro wrap". Override per MCP client with
+# --agent or $RORO_AGENT, e.g. one name for Cursor and one for Claude.
 agent:
   name: %s
   client: ""
@@ -36,12 +36,12 @@ upstream:
   # Name used in policy (resource.server) and pins. Defaults to the command's
   # base name. Set it when one config wraps several servers.
   name: ""
-  # Default upstream for "tollgate serve" (wrap takes the command after --).
+  # Default upstream for "roro serve" (wrap takes the command after --).
   command: []
 
 policy:
   files:
-    - policies/tollgate.cedar
+    - policies/roro.cedar
 
 # Named regular expressions tested against every string argument. Each one
 # becomes context.matches.<name> in Cedar; policy decides what it means.
@@ -52,14 +52,14 @@ matchers:
     regex: '-----BEGIN [A-Z ]*PRIVATE KEY-----'
 
 approval:
-  # A require-approval call waits this long for "tollgate approvals"; then it
+  # A require-approval call waits this long for "roro approvals"; then it
   # is denied.
   timeout: 2m
   # Calls beyond this many concurrent approval waits are denied.
   max_pending: 16
 
 pinning:
-  # block: hide changed tools and deny calls until "tollgate pins accept".
+  # block: hide changed tools and deny calls until "roro pins accept".
   # alert: log the change and let it through.
   on_change: block
 
@@ -73,7 +73,7 @@ http:
   max_sessions_per_agent: 8
   # agents:
   #   - name: research-bot
-  #     token_sha256: <from "tollgate token new --agent research-bot">
+  #     token_sha256: <from "roro token new --agent research-bot">
 
 telemetry:
   # OTLP/HTTP collector, e.g. localhost:4318. Empty disables export.
@@ -88,10 +88,10 @@ func newInitCmd(root *rootFlags) *cobra.Command {
 		Short: "Write a starter config, policy, and audit signing key",
 		Long: `init creates, in --dir:
 
-  tollgate.yaml                     runtime config
-  policies/tollgate.cedar           starter Cedar policy (paths scoped to --sandbox)
-  .tollgate/audit-signing.key       Ed25519 private key for audit checkpoints (0600)
-  .tollgate/audit-signing.key.pub   public key for "tollgate verify"
+  roro.yaml                     runtime config
+  policies/roro.cedar           starter Cedar policy (paths scoped to --sandbox)
+  .roro/audit-signing.key       Ed25519 private key for audit checkpoints (0600)
+  .roro/audit-signing.key.pub   public key for "roro verify"
 
 It never overwrites an existing file. Keep the private key out of version
 control; anyone holding it can sign checkpoints.`,
@@ -122,9 +122,9 @@ func runInit(cmd *cobra.Command, dir, sandbox, agent string) error {
 	if strings.ContainsAny(sb, `"*\`) {
 		return fmt.Errorf("sandbox path %q must not contain quotes, '*' or backslashes", sb)
 	}
-	cfgPath := filepath.Join(absDir, "tollgate.yaml")
-	polPath := filepath.Join(absDir, "policies", "tollgate.cedar")
-	keyPath := filepath.Join(absDir, ".tollgate", "audit-signing.key")
+	cfgPath := filepath.Join(absDir, "roro.yaml")
+	polPath := filepath.Join(absDir, "policies", "roro.cedar")
+	keyPath := filepath.Join(absDir, ".roro", "audit-signing.key")
 	for _, p := range []string{cfgPath, polPath, keyPath} {
 		if _, err := os.Stat(p); err == nil {
 			return fmt.Errorf("%s already exists; init never overwrites files", p)
@@ -151,6 +151,6 @@ func runInit(cmd *cobra.Command, dir, sandbox, agent string) error {
 	}
 	out := cmd.OutOrStdout()
 	fmt.Fprintf(out, "wrote %s\nwrote %s (sandbox %s)\nwrote %s (key id %s)\n", cfgPath, polPath, sb, keyPath, keyID)
-	fmt.Fprintf(out, "\nNext: tollgate --config %s check\n", cfgPath)
+	fmt.Fprintf(out, "\nNext: roro --config %s check\n", cfgPath)
 	return nil
 }

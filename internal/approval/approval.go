@@ -2,7 +2,7 @@
 //
 // The Approver interface keeps the transport open: v0.1 ships CLIApprover,
 // which queues requests in the state database and waits for a decision made
-// with `tollgate approvals` in another terminal. A Slack or Telegram approver
+// with `roro approvals` in another terminal. A Slack or Telegram approver
 // would implement the same interface.
 package approval
 

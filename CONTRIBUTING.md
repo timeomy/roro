@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. Tollgate is small on purpose; changes that keep it small,
+Thanks for helping. Roro is small on purpose; changes that keep it small,
 auditable, and fail-closed are the easiest to accept.
 
 ## Ground rules

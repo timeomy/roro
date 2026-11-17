@@ -1,5 +1,5 @@
-// Package store opens the SQLite databases Tollgate uses for its audit log and
-// runtime state. It uses the pure-Go modernc.org/sqlite driver, so Tollgate
+// Package store opens the SQLite databases Roro uses for its audit log and
+// runtime state. It uses the pure-Go modernc.org/sqlite driver, so Roro
 // builds with CGO_ENABLED=0.
 package store
 
@@ -16,7 +16,7 @@ import (
 
 // Open opens (creating if needed) the SQLite database at path and applies
 // schema. Write transactions take the lock immediately (BEGIN IMMEDIATE), so
-// several Tollgate processes can safely share one database.
+// several Roro processes can safely share one database.
 func Open(ctx context.Context, path string, schema ...string) (*sql.DB, error) {
 	if path == "" {
 		return nil, fmt.Errorf("store: empty database path")

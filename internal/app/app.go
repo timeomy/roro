@@ -1,4 +1,4 @@
-// Package app assembles Tollgate's components from a config. Every step is
+// Package app assembles Roro's components from a config. Every step is
 // fail-closed: if policy, identity, state, or the audit log cannot be
 // initialised, Open returns an error and no traffic is proxied.
 package app
@@ -13,15 +13,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/timeomy/tollgate/internal/approval"
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/config"
-	"github.com/timeomy/tollgate/internal/gate"
-	"github.com/timeomy/tollgate/internal/killswitch"
-	"github.com/timeomy/tollgate/internal/observe"
-	"github.com/timeomy/tollgate/internal/pin"
-	"github.com/timeomy/tollgate/internal/policy"
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/approval"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/config"
+	"github.com/timeomy/roro/internal/gate"
+	"github.com/timeomy/roro/internal/killswitch"
+	"github.com/timeomy/roro/internal/observe"
+	"github.com/timeomy/roro/internal/pin"
+	"github.com/timeomy/roro/internal/policy"
+	"github.com/timeomy/roro/internal/store"
 )
 
 // Runtime holds the shared components for a proxy process.
@@ -106,7 +106,7 @@ func Open(ctx context.Context, cfg *config.Config, logger *slog.Logger, version 
 		_ = r.Close()
 		return nil, err
 	}
-	logger.Info("tollgate ready", "mode", cfg.Mode, "policies", r.Engine.PolicyCount(),
+	logger.Info("roro ready", "mode", cfg.Mode, "policies", r.Engine.PolicyCount(),
 		"audit", cfg.Audit.Path, "state", cfg.StateDB())
 	return r, nil
 }

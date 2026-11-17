@@ -1,12 +1,12 @@
 # Threat model
 
-This document says what Tollgate defends against, how, and where it stops.
+This document says what Roro defends against, how, and where it stops.
 The control-by-control mapping to OWASP and NIST is in
 [nist-owasp-mapping.md](nist-owasp-mapping.md).
 
 ## System and assets
 
-Tollgate runs between an MCP client (the agent's host) and an MCP server (the
+Roro runs between an MCP client (the agent's host) and an MCP server (the
 tools). Assets:
 
 - the systems and data the tools can reach (files, APIs, credentials),
@@ -15,27 +15,27 @@ tools). Assets:
 
 ## Trust assumptions
 
-- The **host running Tollgate** and its state directory are trusted. An
-  attacker with write access to `.tollgate/` can turn the kill switch off,
+- The **host running Roro** and its state directory are trusted. An
+  attacker with write access to `.roro/` can turn the kill switch off,
   edit pins, or approve requests. They cannot rewrite audit history without
   the signing key and without `verify` noticing (see limits below).
-- **Approvals and the kill switch rest on OS file permissions.** `tollgate
-  approvals approve`, `tollgate resume`, and direct writes to `state.db` are
+- **Approvals and the kill switch rest on OS file permissions.** `roro
+  approvals approve`, `roro resume`, and direct writes to `state.db` are
   not authenticated beyond that; `decided_by` is `cli:<os user>`. With
   `wrap`, the agent's MCP server usually runs as the same OS user as
-  Tollgate, so an agent that already has a shell tool could approve its own
+  Roro, so an agent that already has a shell tool could approve its own
   request or clear the kill switch. Do not permit shell-capable tools to an
-  agent you rely on approvals for, or run Tollgate's state under a different
+  agent you rely on approvals for, or run Roro's state under a different
   OS user from the upstream server.
 - The **audit signing key** is secret. Whoever holds it can sign checkpoints.
 - The **policy and config files** are authored by the operator.
 - The **agent and model are not trusted.** Any tool call may be the result of
   prompt injection, a malicious tool description, or a confused model.
-- The **upstream MCP server** is partly trusted: Tollgate cannot stop it from
+- The **upstream MCP server** is partly trusted: Roro cannot stop it from
   doing harm inside an allowed call, but it pins the server's tool
   definitions and never forwards a denied call.
 - For **stdio**, the agent identity comes from the MCP client config that
-  launched `tollgate wrap`. Anyone who can edit that config can choose the
+  launched `roro wrap`. Anyone who can edit that config can choose the
   name. For **HTTP**, identity comes from a bearer token.
 
 ## Threats and controls
@@ -65,7 +65,7 @@ tools). Assets:
 **Audit log**
 
 - Events after the most recent checkpoint are protected by the hash chain but
-  not yet by a signature. Deleting them is not detectable. Tollgate
+  not yet by a signature. Deleting them is not detectable. Roro
   checkpoints every `audit.checkpoint_every` events, on clean shutdown, and on
   kill/resume; `verify --require-sealed` fails if any event is unsealed. A
   crash leaves an unsealed tail.
@@ -87,7 +87,7 @@ tools). Assets:
 **Policy inputs**
 
 - `resource.paths` is cleaned lexically. Symlinks inside an allowed directory
-  that point outside it are not detected (Tollgate cannot see the upstream's
+  that point outside it are not detected (Roro cannot see the upstream's
   filesystem). Keep sandboxes free of symlinks, or run the server in a
   container.
 - Only top-level string arguments get `paths` / `hosts` entries, under their
@@ -116,18 +116,18 @@ tools). Assets:
 
 **Scope**
 
-- Tollgate sees tool calls, not model inputs. It does not detect prompt
+- Roro sees tool calls, not model inputs. It does not detect prompt
   injection; it limits what an injected agent can do.
 - An allowed tool can still do harm within its permission (an allowed write
-  can write bad content). Tollgate narrows permissions; it does not verify
+  can write bad content). Roro narrows permissions; it does not verify
   intent.
 - Tool results are passed to the agent unchanged (only their digest is
   logged). A malicious result can still inject the model; the next tool call
-  is what Tollgate checks.
-- Rate counters are per Tollgate process; several processes for the same
+  is what Roro checks.
+- Rate counters are per Roro process; several processes for the same
   agent each count separately.
 - Pinning is trust on first use: a tool that is malicious the first time it
-  is listed is pinned as-is. Review new tools (`tollgate pins list`).
+  is listed is pinned as-is. Review new tools (`roro pins list`).
 - Calls made before the client lists tools are checked against
   `pin_status: unknown` and are not blocked by pinning.
 - HTTP mode does not carry server-initiated requests or notifications
@@ -149,4 +149,4 @@ tools). Assets:
 
 Prompt-injection classifiers (for example NeMo Guardrails, LlamaFirewall,
 Prompt Shields), memory and context poisoning, agent-to-agent protocols, and
-sandboxing the upstream server. These complement Tollgate.
+sandboxing the upstream server. These complement Roro.

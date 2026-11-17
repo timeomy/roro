@@ -9,13 +9,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/timeomy/tollgate/internal/app"
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/config"
-	"github.com/timeomy/tollgate/internal/gate"
-	"github.com/timeomy/tollgate/internal/identity"
-	"github.com/timeomy/tollgate/internal/observe"
-	"github.com/timeomy/tollgate/internal/proxy"
+	"github.com/timeomy/roro/internal/app"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/config"
+	"github.com/timeomy/roro/internal/gate"
+	"github.com/timeomy/roro/internal/identity"
+	"github.com/timeomy/roro/internal/observe"
+	"github.com/timeomy/roro/internal/proxy"
 )
 
 type agentFlags struct {
@@ -23,7 +23,7 @@ type agentFlags struct {
 }
 
 func (a *agentFlags) register(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&a.name, "agent", "", "agent name (default: $TOLLGATE_AGENT, else agent.name in config)")
+	cmd.Flags().StringVar(&a.name, "agent", "", "agent name (default: $RORO_AGENT, else agent.name in config)")
 	cmd.Flags().StringVar(&a.client, "client", "", "agent client, e.g. cursor (default: agent.client in config)")
 	cmd.Flags().StringVar(&a.owner, "owner", "", "accountable owner (default: agent.owner in config)")
 }
@@ -31,7 +31,7 @@ func (a *agentFlags) register(cmd *cobra.Command) {
 // resolve picks the agent identity: flag, then environment, then config.
 func (a *agentFlags) resolve(cfg *config.Config) (identity.Agent, error) {
 	ag := identity.Agent{Name: cfg.Agent.Name, Client: cfg.Agent.Client, Owner: cfg.Agent.Owner}
-	if env := os.Getenv("TOLLGATE_AGENT"); env != "" {
+	if env := os.Getenv("RORO_AGENT"); env != "" {
 		ag.Name = env
 	}
 	if a.name != "" {
@@ -52,20 +52,20 @@ func newWrapCmd(root *rootFlags) *cobra.Command {
 		Use:   "wrap [flags] -- COMMAND [ARGS...]",
 		Short: "Proxy a local stdio MCP server with policy enforcement",
 		Long: `wrap starts COMMAND as the upstream MCP server and relays MCP traffic
-between it and the client on Tollgate's own stdin/stdout. Every tools/call
+between it and the client on Roro's own stdin/stdout. Every tools/call
 is checked (kill switch, tool pinning, Cedar policy, approval) and audited.
 
 Use it as a drop-in replacement for the server command in an MCP client
-config: "command" becomes the tollgate binary and "args" become
-["--config", "/abs/tollgate.yaml", "wrap", "--agent", "cursor", "--", <original command and args>].
+config: "command" becomes the roro binary and "args" become
+["--config", "/abs/roro.yaml", "wrap", "--agent", "cursor", "--", <original command and args>].
 
-Tollgate refuses to start (fail closed) if the config, policy, signing key,
+Roro refuses to start (fail closed) if the config, policy, signing key,
 or agent identity is missing or invalid.`,
-		Example: `  tollgate --config ~/tollgate/tollgate.yaml wrap --agent cursor -- npx -y @modelcontextprotocol/server-filesystem /tmp/sandbox
-  tollgate wrap --agent research-bot --log-level debug -- ./my-mcp-server`,
+		Example: `  roro --config ~/roro/roro.yaml wrap --agent cursor -- npx -y @modelcontextprotocol/server-filesystem /tmp/sandbox
+  roro wrap --agent research-bot --log-level debug -- ./my-mcp-server`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && cmd.ArgsLenAtDash() != 0 {
-				return errors.New(`put the upstream server command after "--", for example: tollgate wrap -- my-mcp-server`)
+				return errors.New(`put the upstream server command after "--", for example: roro wrap -- my-mcp-server`)
 			}
 			return runWrap(cmd.Context(), root, &af, args)
 		},

@@ -9,9 +9,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 
-	"github.com/timeomy/tollgate/internal/approval"
-	"github.com/timeomy/tollgate/internal/pin"
-	"github.com/timeomy/tollgate/internal/policy"
+	"github.com/timeomy/roro/internal/approval"
+	"github.com/timeomy/roro/internal/pin"
+	"github.com/timeomy/roro/internal/policy"
 )
 
 func rawCall(t *testing.T, id float64, params string) *jsonrpc.Request {

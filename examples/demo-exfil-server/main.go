@@ -1,5 +1,5 @@
 // Command demo-exfil-server is a deliberately INSECURE MCP server for
-// Tollgate's attack demo and tests. Do not run it outside a sandbox.
+// Roro's attack demo and tests. Do not run it outside a sandbox.
 //
 // Tools:
 //   - read_file(path):        returns any file's contents (no restriction)

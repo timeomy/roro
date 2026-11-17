@@ -1,11 +1,11 @@
-# Tollgate
+# Roro
 
-Tollgate is a standalone MCP proxy that enforces per-agent permissions,
+Roro is a standalone MCP proxy that enforces per-agent permissions,
 optional human approval, a tamper-evident audit log, and a kill switch for
 tool calls.
 
 > **Status: v0.1, pre-1.0.** The controls below are implemented and tested.
-> Read [what Tollgate is not](#what-tollgate-is-not) and the
+> Read [what Roro is not](#what-roro-is-not) and the
 > [threat model](docs/threat-model.md) before relying on it.
 
 ## Why it exists
@@ -23,7 +23,7 @@ abuse, poisoned tools, and humans being talked into approving bad actions.
 Joint guidance from CISA and partner agencies on deploying AI systems securely
 asks for least privilege, strong logging, and monitoring around AI systems.
 
-Tollgate puts those controls in one small binary between any MCP client and
+Roro puts those controls in one small binary between any MCP client and
 any MCP server, without changing either:
 
 - **Per-agent identity**: every decision is attributed to a named agent.
@@ -33,7 +33,7 @@ any MCP server, without changing either:
 - **Human approval**: risky calls wait for a person, who sees the actual tool
   name and arguments (secrets redacted), never a summary. No answer means no.
 - **Tamper-evident audit log**: SQLite, SHA-256 hash chain, Ed25519-signed
-  checkpoints, secret redaction, `tollgate verify`.
+  checkpoints, secret redaction, `roro verify`.
 - **Kill switch**: stop all agents, or one, at the next tool call.
 - **Tool pinning**: a tool whose description or schema changes is hidden and
   blocked until a human accepts it.
@@ -44,12 +44,12 @@ any MCP server, without changing either:
 Requires Go 1.27+.
 
 ```sh
-git clone https://github.com/timeomy/tollgate && cd tollgate
-go build -o bin/tollgate ./cmd/tollgate
+git clone https://github.com/timeomy/roro && cd roro
+go build -o bin/roro ./cmd/roro
 
-mkdir -p ~/tollgate && cd ~/tollgate
-/path/to/bin/tollgate init --agent my-agent   # config, starter policy, signing key
-/path/to/bin/tollgate check                   # validate everything
+mkdir -p ~/roro && cd ~/roro
+/path/to/bin/roro init --agent my-agent   # config, starter policy, signing key
+/path/to/bin/roro check                   # validate everything
 ```
 
 Then see it stop an attack (builds everything into a temp dir, no network):
@@ -61,12 +61,12 @@ Then see it stop an attack (builds everything into a temp dir, no network):
 A scripted agent reads a file containing a planted prompt injection and then
 tries to read `/etc/passwd`, call an `exfiltrate` tool, and POST a key to an
 attacker, first in the clear and then base64-encoded. Every attempt is
-blocked and logged, the upstream server never sees them, `tollgate verify`
+blocked and logged, the upstream server never sees them, `roro verify`
 passes, and verifying a tampered copy of the log fails.
 
 ## Use with Claude Desktop or Cursor
 
-`tollgate wrap` is a drop-in replacement for a stdio server command. Move the
+`roro wrap` is a drop-in replacement for a stdio server command. Move the
 original command after `--` and give the agent a name. Use absolute paths:
 GUI apps start with a minimal `PATH`.
 
@@ -89,9 +89,9 @@ After:
 {
   "mcpServers": {
     "filesystem": {
-      "command": "/usr/local/bin/tollgate",
+      "command": "/usr/local/bin/roro",
       "args": [
-        "--config", "/Users/me/tollgate/tollgate.yaml",
+        "--config", "/Users/me/roro/roro.yaml",
         "wrap", "--agent", "claude-desktop", "--client", "claude-desktop",
         "--", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/Users/me/sandbox"
       ]
@@ -105,8 +105,8 @@ After:
 - Cursor: `~/.cursor/mcp.json` or `.cursor/mcp.json`, see
   [examples/cursor](examples/cursor/).
 
-For HTTP clients, run `tollgate serve` and give each agent a token
-(`tollgate token new --agent NAME`); see `tollgate serve --help`.
+For HTTP clients, run `roro serve` and give each agent a token
+(`roro token new --agent NAME`); see `roro serve --help`.
 
 ## What a denial looks like
 
@@ -115,22 +115,22 @@ the user what happened, plus machine-readable metadata:
 
 ```json
 {
-  "content": [{"type": "text", "text": "Tollgate blocked the call to tool \"exfiltrate\" for agent \"research-bot\" (reason: dangerous_tool_blocked). denied by policy deny-dangerous-tools."}],
+  "content": [{"type": "text", "text": "Roro blocked the call to tool \"exfiltrate\" for agent \"research-bot\" (reason: dangerous_tool_blocked). denied by policy deny-dangerous-tools."}],
   "isError": true,
-  "_meta": {"io.github.timeomy.tollgate/decision": {"decision": "deny", "reason": "dangerous_tool_blocked", "policy_ids": ["deny-dangerous-tools"]}}
+  "_meta": {"im.roro/decision": {"decision": "deny", "reason": "dangerous_tool_blocked", "policy_ids": ["deny-dangerous-tools"]}}
 }
 ```
 
 The call never reaches the upstream server. In the log:
 
 ```
-$ tollgate logs --decision deny
+$ roro logs --decision deny
 SEQ  TIME (UTC)           KIND       AGENT         TOOL        DECISION  REASON                  ARGS
 5    2026-11-16 15:56:49  tool_call  research-bot  exfiltrate  deny      dangerous_tool_blocked  {"data":"[REDACTED:aws_key]"}
 ```
 
 Policies live in Cedar; see [docs/policy.md](docs/policy.md) and the starter
-policy in [policies/examples/tollgate.cedar](policies/examples/tollgate.cedar).
+policy in [policies/examples/roro.cedar](policies/examples/roro.cedar).
 
 ## Approvals
 
@@ -138,15 +138,15 @@ When policy marks a call `@approval`, it waits (default 2 minutes) for a
 human in any terminal:
 
 ```sh
-tollgate approvals watch      # prompts y/N for each request, showing tool + args
-tollgate approvals list
-tollgate approvals approve 3f9a1c2b7d4e
+roro approvals watch      # prompts y/N for each request, showing tool + args
+roro approvals list
+roro approvals approve 3f9a1c2b7d4e
 ```
 
 ## Verify the log
 
 ```sh
-$ tollgate verify --require-sealed
+$ roro verify --require-sealed
 events:       8 (last seq 8)
 checkpoints:  1 (last covers seq 8)
 unsealed:     0
@@ -154,38 +154,38 @@ anchor:       8:3f1c...e9a2
 result:       OK - hash chain and signatures verified
 ```
 
-`verify` needs only the public key (`.tollgate/audit-signing.key.pub`), so an
-auditor can check a copy: `tollgate verify --log copy.db --pubkey key.pub`.
+`verify` needs only the public key (`.roro/audit-signing.key.pub`), so an
+auditor can check a copy: `roro verify --log copy.db --pubkey key.pub`.
 It also prints an `anchor:` line. Store it somewhere off the machine and
 pass it back with `--expect SEQ:HASH`. That is what catches a log rolled
 back to an earlier checkpoint, which the log alone cannot prove (see the
 [threat model](docs/threat-model.md)).
 It exits non-zero if any row was changed, removed, or reordered, a signature
-is bad, or the log was cut short. `tollgate export -o audit.jsonl` exports
+is bad, or the log was cut short. `roro export -o audit.jsonl` exports
 events and checkpoints with their hashes and signatures.
 
 ## Kill and resume
 
 ```sh
-tollgate kill                                  # every agent, next call
-tollgate kill --agent research-bot --reason "investigating"
-tollgate status
-tollgate resume --agent research-bot
-tollgate resume
+roro kill                                  # every agent, next call
+roro kill --agent research-bot --reason "investigating"
+roro status
+roro resume --agent research-bot
+roro resume
 ```
 
-Every running Tollgate process that shares the state directory obeys at the
+Every running Roro process that shares the state directory obeys at the
 next tool call. The switch survives restarts. Kills and resumes are logged.
 
 ## Tool pinning
 
 The first `tools/list` pins each tool's definition. If a server later changes
-a description or schema, Tollgate hides that tool and denies its calls until
+a description or schema, Roro hides that tool and denies its calls until
 you review it:
 
 ```sh
-tollgate pins list
-tollgate pins accept --server filesystem --tool read_file
+roro pins list
+roro pins accept --server filesystem --tool read_file
 ```
 
 ## Telemetry
@@ -193,8 +193,8 @@ tollgate pins accept --server filesystem --tool read_file
 Set `telemetry.otlp_endpoint` (OTLP/HTTP, e.g. `localhost:4318`). Each
 `tools/call` becomes a span named `tools/call <tool>` with `mcp.method.name`,
 `gen_ai.tool.name`, `gen_ai.operation.name=execute_tool`, `gen_ai.agent.name`,
-and `tollgate.decision` / `tollgate.reason`. Metrics:
-`mcp.server.operation.duration` and `tollgate.decisions`. Arguments and
+and `roro.decision` / `roro.reason`. Metrics:
+`mcp.server.operation.duration` and `roro.decisions`. Arguments and
 results are never exported. The GenAI conventions are still marked
 "Development" upstream; the names used are pinned in
 [testdata/semconv-genai-mcp.json](testdata/semconv-genai-mcp.json).
@@ -202,7 +202,7 @@ results are never exported. The GenAI conventions are still marked
 ## Documentation
 
 - [docs/architecture.md](docs/architecture.md): design, packages, protocols
-- [docs/policy.md](docs/policy.md): writing Cedar policy for Tollgate
+- [docs/policy.md](docs/policy.md): writing Cedar policy for Roro
 - [docs/threat-model.md](docs/threat-model.md): what is defended, known limits
 - [docs/nist-owasp-mapping.md](docs/nist-owasp-mapping.md): OWASP Agentic Top 10
   and NIST agent-identity tenets, enforced vs. documented only
@@ -219,7 +219,7 @@ tampering and truncation, kill switch persistence, pinning, redaction,
 approval timeouts). End-to-end tests run the real binary over stdio and HTTP,
 including the prompt-injection exfiltration scenario.
 
-## What Tollgate is not
+## What Roro is not
 
 - Not a prompt-injection detector or content filter. It limits what an
   injected agent can do; it does not see the model's input.

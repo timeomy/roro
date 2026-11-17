@@ -14,13 +14,13 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 
-	"github.com/timeomy/tollgate/internal/approval"
-	"github.com/timeomy/tollgate/internal/audit"
-	"github.com/timeomy/tollgate/internal/config"
-	"github.com/timeomy/tollgate/internal/observe"
-	"github.com/timeomy/tollgate/internal/pin"
-	"github.com/timeomy/tollgate/internal/policy"
-	"github.com/timeomy/tollgate/internal/redact"
+	"github.com/timeomy/roro/internal/approval"
+	"github.com/timeomy/roro/internal/audit"
+	"github.com/timeomy/roro/internal/config"
+	"github.com/timeomy/roro/internal/observe"
+	"github.com/timeomy/roro/internal/pin"
+	"github.com/timeomy/roro/internal/policy"
+	"github.com/timeomy/roro/internal/redact"
 )
 
 // previewLimit bounds the redacted argument preview stored in the log.
@@ -61,7 +61,7 @@ func (s *Session) handleCall(ctx context.Context, req *jsonrpc.Request) (jsonrpc
 		v := verdict{outcome: policy.Deny, reason: policy.ReasonMalformedRequest, detail: err.Error()}
 		s.record(ctx, c, v)
 		span.Decide(ctx, string(v.outcome), v.reason, nil, "")
-		span.End(ctx, "tollgate."+v.reason, v.detail)
+		span.End(ctx, "roro."+v.reason, v.detail)
 		return nil, invalidParams(req.ID, err.Error())
 	}
 
@@ -77,7 +77,7 @@ func (s *Session) handleCall(ctx context.Context, req *jsonrpc.Request) (jsonrpc
 	span.Decide(ctx, string(v.outcome), v.reason, v.policyIDs, v.approvalID)
 
 	if v.outcome != policy.Allow {
-		span.End(ctx, "tollgate."+v.reason, v.detail)
+		span.End(ctx, "roro."+v.reason, v.detail)
 		s.log.Info("tool call denied", "tool", c.tool, "reason", v.reason, "policies", v.policyIDs)
 		return nil, denial(req.ID, c.tool, s.info.Agent.Name, v)
 	}
@@ -85,7 +85,7 @@ func (s *Session) handleCall(ctx context.Context, req *jsonrpc.Request) (jsonrpc
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
-		span.End(ctx, "tollgate.session_closed", "session closed")
+		span.End(ctx, "roro.session_closed", "session closed")
 		return nil, nil
 	}
 	s.calls[idKey(req.ID)] = &pendingCall{start: s.deps.Now(), span: span, tool: c.tool, id: idString(req.ID)}
@@ -191,7 +191,7 @@ func (s *Session) precheck(ctx context.Context, c call) (string, *verdict) {
 	}
 	if pinStatus == pin.StatusChanged && s.deps.PinOnChange == config.PinBlock && s.deps.Mode == config.ModeEnforce {
 		return pinStatus, &verdict{outcome: policy.Deny, reason: policy.ReasonToolChanged,
-			detail: "tool definition changed since it was pinned; review with `tollgate pins list`"}
+			detail: "tool definition changed since it was pinned; review with `roro pins list`"}
 	}
 	return pinStatus, nil
 }

@@ -7,9 +7,9 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
-// MetaKey is the _meta key carrying Tollgate's machine-readable decision on
+// MetaKey is the _meta key carrying Roro's machine-readable decision on
 // a blocked call.
-const MetaKey = "io.github.timeomy.tollgate/decision"
+const MetaKey = "im.roro/decision"
 
 // DecisionMeta is the value under MetaKey.
 type DecisionMeta struct {
@@ -23,7 +23,7 @@ type DecisionMeta struct {
 // true. The model sees why it was blocked and can tell the user; the call
 // never reaches the upstream server.
 func denial(id jsonrpc.ID, tool, agent string, v verdict) *jsonrpc.Response {
-	text := fmt.Sprintf("Tollgate blocked the call to tool %q for agent %q (reason: %s).", tool, agent, v.reason)
+	text := fmt.Sprintf("Roro blocked the call to tool %q for agent %q (reason: %s).", tool, agent, v.reason)
 	if v.detail != "" {
 		text += " " + v.detail + "."
 	}
@@ -36,15 +36,15 @@ func denial(id jsonrpc.ID, tool, agent string, v verdict) *jsonrpc.Response {
 	}
 	b, err := json.Marshal(result)
 	if err != nil { // cannot happen with these types; fall back to a protocol error
-		return &jsonrpc.Response{ID: id, Error: &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: "tollgate: call blocked"}}
+		return &jsonrpc.Response{ID: id, Error: &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: "roro: call blocked"}}
 	}
 	return &jsonrpc.Response{ID: id, Result: b}
 }
 
 func invalidParams(id jsonrpc.ID, msg string) *jsonrpc.Response {
-	return &jsonrpc.Response{ID: id, Error: &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "tollgate: " + msg}}
+	return &jsonrpc.Response{ID: id, Error: &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "roro: " + msg}}
 }
 
 func internalError(id jsonrpc.ID, msg string) *jsonrpc.Response {
-	return &jsonrpc.Response{ID: id, Error: &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: "tollgate: " + msg}}
+	return &jsonrpc.Response{ID: id, Error: &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: "roro: " + msg}}
 }

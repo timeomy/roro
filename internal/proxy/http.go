@@ -17,7 +17,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 
-	"github.com/timeomy/tollgate/internal/identity"
+	"github.com/timeomy/roro/internal/identity"
 )
 
 // HTTP header names from the MCP streamable HTTP transport.
@@ -58,7 +58,7 @@ type HTTPOptions struct {
 	Logger              *slog.Logger
 }
 
-// HTTPServer is Tollgate's MCP streamable HTTP endpoint.
+// HTTPServer is Roro's MCP streamable HTTP endpoint.
 //
 // Scope (v0.1): clients POST single JSON-RPC messages and receive
 // application/json responses; sessions are created by initialize and ended by
@@ -110,7 +110,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	agent, ok := s.opts.Authenticate(r)
 	if !ok {
-		w.Header().Set("WWW-Authenticate", `Bearer realm="tollgate"`)
+		w.Header().Set("WWW-Authenticate", `Bearer realm="roro"`)
 		http.Error(w, "missing or invalid bearer token", http.StatusUnauthorized)
 		return
 	}
@@ -121,7 +121,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.serveDELETE(w, r, agent)
 	default:
 		w.Header().Set("Allow", "POST, DELETE")
-		http.Error(w, "method not allowed (Tollgate does not offer a GET event stream)", http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed (Roro does not offer a GET event stream)", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -351,5 +351,5 @@ func (s *HTTPServer) originAllowed(r *http.Request) bool {
 func (s *HTTPServer) String() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return fmt.Sprintf("tollgate http server (%d sessions)", len(s.sessions))
+	return fmt.Sprintf("roro http server (%d sessions)", len(s.sessions))
 }

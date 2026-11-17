@@ -1,14 +1,14 @@
 // Package policy decides whether a tool call is allowed, denied, or needs
 // human approval.
 //
-// The Engine interface keeps the rest of Tollgate independent of the policy
+// The Engine interface keeps the rest of Roro independent of the policy
 // language. v0.1 ships a Cedar implementation (CedarEngine).
 package policy
 
 import (
 	"time"
 
-	"github.com/timeomy/tollgate/internal/identity"
+	"github.com/timeomy/roro/internal/identity"
 )
 
 // Outcome is the result of a policy decision.
@@ -21,7 +21,7 @@ const (
 	RequireApproval Outcome = "require_approval"
 )
 
-// Stable, machine-readable reason codes produced by Tollgate itself. Policy
+// Stable, machine-readable reason codes produced by Roro itself. Policy
 // authors add their own with the @reason("...") annotation.
 const (
 	ReasonPermitted         = "permitted"

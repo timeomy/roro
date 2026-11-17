@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/approval"
+	"github.com/timeomy/roro/internal/approval"
 )
 
 func TestCleanEscapesTerminalControls(t *testing.T) {

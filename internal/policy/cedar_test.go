@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/identity"
+	"github.com/timeomy/roro/internal/identity"
 )
 
-const starterPolicy = "../../policies/examples/tollgate.cedar"
+const starterPolicy = "../../policies/examples/roro.cedar"
 
 func starterEngine(t *testing.T) *CedarEngine {
 	t.Helper()
@@ -189,7 +189,7 @@ func TestLoadFailsClosed(t *testing.T) {
 
 func TestErroringForbidFailsClosed(t *testing.T) {
 	// The forbid reads an attribute that does not exist; Cedar skips erroring
-	// policies, which would let the permit through. Tollgate must deny.
+	// policies, which would let the permit through. Roro must deny.
 	p := writeCedar(t, `
 permit (principal, action, resource);
 @id("broken") forbid (principal, action, resource) when { resource.args.missing == "x" };

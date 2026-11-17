@@ -14,7 +14,7 @@ import (
 // maxJSONDepth bounds nesting in tools/call params.
 const maxJSONDepth = 64
 
-// toolNamePattern is the set of tool names Tollgate accepts in a call. It
+// toolNamePattern is the set of tool names Roro accepts in a call. It
 // keeps names printable (no control characters reach an approval prompt or
 // log table) and bounded in length.
 var toolNamePattern = regexp.MustCompile(`^[A-Za-z0-9._:/-]{1,128}$`)
@@ -32,7 +32,7 @@ type jsonFrame struct {
 // differently: an object with a repeated key, or with two keys that differ
 // only by case. Go's encoding/json matches struct fields case-insensitively
 // and keeps the last duplicate; other parsers keep the first or match
-// exactly. Tollgate decides on one reading and the upstream must see the
+// exactly. Roro decides on one reading and the upstream must see the
 // same one, so such input is refused rather than guessed at.
 func checkUnambiguous(raw []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(raw))

@@ -1,9 +1,9 @@
 // Package pin implements tool-definition pinning (trust on first use).
 //
-// The first time Tollgate sees a tool in a tools/list response it records a
+// The first time Roro sees a tool in a tools/list response it records a
 // hash of the tool's name, title, description, input/output schemas, and
 // annotations. If a later listing changes any of those, the tool is marked
-// "changed" until a human accepts the new definition with `tollgate pins
+// "changed" until a human accepts the new definition with `roro pins
 // accept`. In block mode a changed tool is hidden from tools/list and calls to
 // it are denied, because a silently edited description is itself a
 // prompt-injection channel (tool poisoning, "rug pull").
@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 // Schema creates the pin table.
@@ -45,7 +45,7 @@ var Schema = []string{
 const (
 	StatusPinned  = "pinned"  // matches the accepted definition
 	StatusChanged = "changed" // differs from the accepted definition
-	StatusUnknown = "unknown" // never listed through Tollgate
+	StatusUnknown = "unknown" // never listed through Roro
 )
 
 // pinnedFields are the tool properties covered by the hash.
@@ -189,7 +189,7 @@ func (s *Store) Accept(ctx context.Context, server, tool string) (Change, error)
 	return c, err
 }
 
-// Entry is one pin as listed by `tollgate pins list`.
+// Entry is one pin as listed by `roro pins list`.
 type Entry struct {
 	Server, Tool, Hash, PendingHash, FirstSeen, ChangedAt string
 }

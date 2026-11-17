@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 func TestKillSwitchAcrossProcesses(t *testing.T) {
@@ -19,31 +19,31 @@ func TestKillSwitchAcrossProcesses(t *testing.T) {
 
 	// A separate process flips the switch; the running proxy obeys on the
 	// very next call.
-	w.tollgate("kill", "--agent", "test-agent", "--reason", "e2e")
+	w.roro("kill", "--agent", "test-agent", "--reason", "e2e")
 	requireBlocked(t, call(t, s, "echo", map[string]any{"text": "during"}), "kill_switch_active")
-	if out := w.tollgate("status"); !strings.Contains(out, "kill switch: ON for agent:test-agent") {
+	if out := w.roro("status"); !strings.Contains(out, "kill switch: ON for agent:test-agent") {
 		t.Fatalf("status:\n%s", out)
 	}
 
-	w.tollgate("resume", "--agent", "test-agent")
+	w.roro("resume", "--agent", "test-agent")
 	requireAllowed(t, call(t, s, "echo", map[string]any{"text": "after"}))
 
-	w.tollgate("kill")
+	w.roro("kill")
 	requireBlocked(t, call(t, s, "echo", map[string]any{"text": "global"}), "kill_switch_active")
 	_ = s.Close()
 
 	// The switch persists: a new proxy process is still blocked.
 	s2 := w.connect(bins.echo)
 	requireBlocked(t, call(t, s2, "echo", map[string]any{"text": "restart"}), "kill_switch_active")
-	w.tollgate("resume")
+	w.roro("resume")
 	requireAllowed(t, call(t, s2, "echo", map[string]any{"text": "resumed"}))
 	_ = s2.Close()
 
-	logs := w.tollgate("logs", "--kind", "kill")
+	logs := w.roro("logs", "--kind", "kill")
 	if !strings.Contains(logs, "agent:test-agent") || !strings.Contains(logs, "*") {
 		t.Fatalf("kill events missing:\n%s", logs)
 	}
-	w.tollgate("verify", "--require-sealed")
+	w.roro("verify", "--require-sealed")
 }
 
 var approvalID = regexp.MustCompile(`=== approval ([0-9a-f]+) ===`)
@@ -57,13 +57,13 @@ func TestHumanApprovalViaCLI(t *testing.T) {
 	go func() {
 		deadline := time.Now().Add(20 * time.Second)
 		for time.Now().Before(deadline) {
-			out, _ := w.tollgateErr("approvals", "list")
+			out, _ := w.roroErr("approvals", "list")
 			if m := approvalID.FindStringSubmatch(out); m != nil {
 				if !strings.Contains(out, "tool:     http_post") || !strings.Contains(out, "https://docs.example.org/upload") {
 					done <- "approval prompt lacks raw tool/args:\n" + out
 					return
 				}
-				out, err := w.tollgateErr("approvals", "approve", m[1])
+				out, err := w.roroErr("approvals", "approve", m[1])
 				if err != nil {
 					done <- out
 					return
@@ -111,17 +111,17 @@ func TestToolPinningBlocksChangedDescription(t *testing.T) {
 		}
 	}
 	requireBlocked(t, call(t, s2, "read_file", map[string]any{"path": notes}), "tool_definition_changed")
-	if out := w.tollgate("pins", "list"); !strings.Contains(out, "changed ->") {
+	if out := w.roro("pins", "list"); !strings.Contains(out, "changed ->") {
 		t.Fatalf("pins list:\n%s", out)
 	}
 	_ = s2.Close()
 
 	// After a human reviews and accepts, the tool works again.
-	w.tollgate("pins", "accept", "--server", "demo-exfil-server", "--tool", "read_file")
+	w.roro("pins", "accept", "--server", "demo-exfil-server", "--tool", "read_file")
 	s3 := w.connect(bins.exfil, "DEMO_POISON=1")
 	requireAllowed(t, call(t, s3, "read_file", map[string]any{"path": notes}))
 	_ = s3.Close()
-	w.tollgate("verify", "--require-sealed")
+	w.roro("verify", "--require-sealed")
 }
 
 // copyAndEdit copies a SQLite database and runs statements on the copy.

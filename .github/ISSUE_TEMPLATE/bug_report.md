@@ -12,4 +12,4 @@ labels: bug
 
 **Steps to reproduce** (config and policy with secrets removed, MCP client, upstream server)
 
-**Version**: output of `tollgate version`
+**Version**: output of `roro version`

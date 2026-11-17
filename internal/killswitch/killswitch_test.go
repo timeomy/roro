@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 func open(t *testing.T, path string) *Switch {

@@ -1,4 +1,4 @@
-// Command echo-server is a tiny, harmless MCP server used by Tollgate's
+// Command echo-server is a tiny, harmless MCP server used by Roro's
 // pass-through tests and the quickstart. It speaks MCP over stdio.
 //
 // Tools:
@@ -28,7 +28,7 @@ type failArgs struct {
 }
 
 func main() {
-	server := mcp.NewServer(&mcp.Implementation{Name: "tollgate-echo", Version: "0.1.0"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "roro-echo", Version: "0.1.0"}, nil)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "echo",

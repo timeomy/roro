@@ -1,6 +1,6 @@
-// Command tamper edits a COPY of a Tollgate audit log the way an attacker
+// Command tamper edits a COPY of a Roro audit log the way an attacker
 // covering their tracks would: it turns the first deny into an allow. It is
-// used by scripts/demo.sh to show that `tollgate verify` catches the edit.
+// used by scripts/demo.sh to show that `roro verify` catches the edit.
 package main
 
 import (
@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 func main() {

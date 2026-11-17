@@ -1,9 +1,9 @@
-// Package config loads and validates tollgate.yaml.
+// Package config loads and validates roro.yaml.
 //
 // YAML holds runtime wiring only: where state lives, which policy files to
 // load, timeouts, listeners, and telemetry endpoints. Authorization logic
 // lives in Cedar policy files. Loading is strict: unknown keys, bad values,
-// and missing files are errors, and Tollgate refuses to proxy without a valid
+// and missing files are errors, and Roro refuses to proxy without a valid
 // configuration (fail closed).
 package config
 
@@ -31,7 +31,7 @@ const (
 	PinAlert = "alert"
 )
 
-// Config is the parsed tollgate.yaml.
+// Config is the parsed roro.yaml.
 type Config struct {
 	Version   int             `yaml:"version"`
 	Mode      string          `yaml:"mode"`
@@ -72,7 +72,7 @@ type PolicyConfig struct {
 	Files []string `yaml:"files"`
 }
 
-// MatcherConfig defines a named regular expression. Tollgate tests every
+// MatcherConfig defines a named regular expression. Roro tests every
 // string argument against it and exposes the result to Cedar as
 // context.matches.<name>. The matcher itself allows or denies nothing.
 type MatcherConfig struct {
@@ -83,7 +83,7 @@ type MatcherConfig struct {
 // ApprovalConfig configures human approval.
 type ApprovalConfig struct {
 	Timeout Duration `yaml:"timeout"`
-	// MaxPending caps approval waits per Tollgate process; calls beyond it
+	// MaxPending caps approval waits per Roro process; calls beyond it
 	// are denied rather than queued.
 	MaxPending int `yaml:"max_pending"`
 }
@@ -100,7 +100,7 @@ type AuditConfig struct {
 	CheckpointEvery int    `yaml:"checkpoint_every"`
 }
 
-// HTTPConfig configures `tollgate serve`.
+// HTTPConfig configures `roro serve`.
 type HTTPConfig struct {
 	Listen         string      `yaml:"listen"`
 	AllowedOrigins []string    `yaml:"allowed_origins"`
@@ -210,7 +210,7 @@ func (c *Config) applyDefaults() {
 		c.Mode = ModeEnforce
 	}
 	if c.StateDir == "" {
-		c.StateDir = ".tollgate"
+		c.StateDir = ".roro"
 	}
 	if c.Approval.Timeout.Duration == 0 {
 		c.Approval.Timeout.Duration = 2 * time.Minute
@@ -240,7 +240,7 @@ func (c *Config) applyDefaults() {
 		c.HTTP.MaxBodyBytes = 4 << 20
 	}
 	if c.Telemetry.ServiceName == "" {
-		c.Telemetry.ServiceName = "tollgate"
+		c.Telemetry.ServiceName = "roro"
 	}
 }
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 func newApprover(t *testing.T) (*CLIApprover, func(id string, approve bool) error) {

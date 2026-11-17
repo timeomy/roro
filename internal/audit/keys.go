@@ -73,12 +73,12 @@ func writeExclusive(path string, data []byte, mode os.FileMode) error {
 }
 
 // LoadSigner reads a private key written by GenerateKey. A missing key is an
-// error; Tollgate never generates one implicitly.
+// error; Roro never generates one implicitly.
 func LoadSigner(path string) (*Signer, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("audit: signing key %s not found; run `tollgate init` to create one", path)
+			return nil, fmt.Errorf("audit: signing key %s not found; run `roro init` to create one", path)
 		}
 		return nil, fmt.Errorf("audit: %w", err)
 	}

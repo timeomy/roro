@@ -1,7 +1,7 @@
 // Package killswitch stops tool calls globally or for one agent.
 //
-// State lives in the shared state database, so `tollgate kill` in one
-// terminal affects every running Tollgate process on the next tool call, and
+// State lives in the shared state database, so `roro kill` in one
+// terminal affects every running Roro process on the next tool call, and
 // survives restarts. If the state cannot be read, the switch reports active
 // (fail closed).
 package killswitch
@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 // Schema creates the kill switch table.

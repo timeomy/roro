@@ -1,4 +1,4 @@
-// Package tests holds end-to-end tests that run the real tollgate binary
+// Package tests holds end-to-end tests that run the real roro binary
 // against real MCP servers over stdio and HTTP.
 package tests
 
@@ -21,7 +21,7 @@ import (
 
 // bins holds paths to binaries built once in TestMain.
 var bins struct {
-	tollgate, echo, exfil string
+	roro, echo, exfil string
 }
 
 func TestMain(m *testing.M) {
@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 }
 
 func runWithBinaries(m *testing.M) int {
-	dir, err := os.MkdirTemp("", "tollgate-e2e-")
+	dir, err := os.MkdirTemp("", "roro-e2e-")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tempdir:", err)
 		return 1
@@ -39,13 +39,13 @@ func runWithBinaries(m *testing.M) int {
 	if runtime.GOOS == "windows" {
 		exe = ".exe"
 	}
-	bins.tollgate = filepath.Join(dir, "tollgate"+exe)
+	bins.roro = filepath.Join(dir, "roro"+exe)
 	bins.echo = filepath.Join(dir, "echo-server"+exe)
 	bins.exfil = filepath.Join(dir, "demo-exfil-server"+exe)
 	for out, pkg := range map[string]string{
-		bins.tollgate: "../cmd/tollgate",
-		bins.echo:     "../examples/echo-server",
-		bins.exfil:    "../examples/demo-exfil-server",
+		bins.roro:  "../cmd/roro",
+		bins.echo:  "../examples/echo-server",
+		bins.exfil: "../examples/demo-exfil-server",
 	} {
 		cmd := exec.Command("go", "build", "-o", out, pkg)
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
@@ -57,7 +57,7 @@ func runWithBinaries(m *testing.M) int {
 	return m.Run()
 }
 
-// workspace is a directory initialised with `tollgate init`.
+// workspace is a directory initialised with `roro init`.
 type workspace struct {
 	t       *testing.T
 	dir     string
@@ -72,9 +72,9 @@ func newWorkspace(t *testing.T, edits ...func(string) string) *workspace {
 	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
 		dir = resolved // macOS: /var -> /private/var, keep paths canonical
 	}
-	w := &workspace{t: t, dir: dir, config: filepath.Join(dir, "tollgate.yaml"),
+	w := &workspace{t: t, dir: dir, config: filepath.Join(dir, "roro.yaml"),
 		sandbox: filepath.Join(dir, "sandbox"), exfil: filepath.Join(dir, "exfil.log")}
-	w.tollgate("init", "--dir", dir, "--agent", "test-agent")
+	w.roro("init", "--dir", dir, "--agent", "test-agent")
 	cfg, err := os.ReadFile(w.config)
 	if err != nil {
 		t.Fatal(err)
@@ -89,33 +89,33 @@ func newWorkspace(t *testing.T, edits ...func(string) string) *workspace {
 	return w
 }
 
-// tollgate runs a CLI command and fails the test if it exits non-zero.
-func (w *workspace) tollgate(args ...string) string {
+// roro runs a CLI command and fails the test if it exits non-zero.
+func (w *workspace) roro(args ...string) string {
 	w.t.Helper()
-	out, err := w.tollgateErr(args...)
+	out, err := w.roroErr(args...)
 	if err != nil {
-		w.t.Fatalf("tollgate %v: %v\n%s", args, err, out)
+		w.t.Fatalf("roro %v: %v\n%s", args, err, out)
 	}
 	return out
 }
 
-func (w *workspace) tollgateErr(args ...string) (string, error) {
+func (w *workspace) roroErr(args ...string) (string, error) {
 	full := args
 	if len(args) == 0 || args[0] != "init" {
 		full = append([]string{"--config", w.config}, args...)
 	}
-	cmd := exec.Command(bins.tollgate, full...)
+	cmd := exec.Command(bins.roro, full...)
 	var buf bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &buf, &buf
 	err := cmd.Run()
 	return buf.String(), err
 }
 
-// connect starts `tollgate wrap` around server and returns a client session.
+// connect starts `roro wrap` around server and returns a client session.
 func (w *workspace) connect(server string, env ...string) *mcp.ClientSession {
 	w.t.Helper()
 	args := []string{"--config", w.config, "wrap", "--agent", "test-agent", "--", server}
-	return connectCmd(w.t, append(env, "DEMO_EXFIL_LOG="+w.exfil), bins.tollgate, args...)
+	return connectCmd(w.t, append(env, "DEMO_EXFIL_LOG="+w.exfil), bins.roro, args...)
 }
 
 func connectCmd(t *testing.T, env []string, name string, args ...string) *mcp.ClientSession {
@@ -134,13 +134,13 @@ func connectCmd(t *testing.T, env []string, name string, args ...string) *mcp.Cl
 	return session
 }
 
-// decision extracts Tollgate's decision metadata from a blocked result.
+// decision extracts Roro's decision metadata from a blocked result.
 func decision(t *testing.T, res *mcp.CallToolResult) map[string]any {
 	t.Helper()
 	if res == nil || !res.IsError {
 		return nil
 	}
-	m, _ := res.Meta["io.github.timeomy.tollgate/decision"].(map[string]any)
+	m, _ := res.Meta["im.roro/decision"].(map[string]any)
 	return m
 }
 

@@ -1,5 +1,5 @@
 // Package identity defines agent principals: the named identities every
-// Tollgate decision is attributed to.
+// Roro decision is attributed to.
 package identity
 
 import (
@@ -15,7 +15,7 @@ import (
 
 // Agent is a named agent principal, for example agent::research-bot.
 type Agent struct {
-	// Name is the stable identifier used in policy (Tollgate::Agent::"<Name>").
+	// Name is the stable identifier used in policy (Roro::Agent::"<Name>").
 	Name string
 	// Client is the MCP host or framework the agent runs in (for example
 	// "cursor" or "claude-desktop"). Informational, available to policy.
@@ -28,7 +28,7 @@ type Agent struct {
 var namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
 
 // ErrNoAgent is returned when no agent identity was configured.
-var ErrNoAgent = errors.New("no agent identity: set agent.name in tollgate.yaml, TOLLGATE_AGENT, or --agent")
+var ErrNoAgent = errors.New("no agent identity: set agent.name in roro.yaml, RORO_AGENT, or --agent")
 
 // Validate checks that the agent name is usable as a principal id.
 func (a Agent) Validate() error {
@@ -44,7 +44,7 @@ func (a Agent) Validate() error {
 // String returns the display form, for example "agent::cursor".
 func (a Agent) String() string { return "agent::" + a.Name }
 
-// TokenPrefix marks Tollgate agent tokens so they are easy to recognise (and
+// TokenPrefix marks Roro agent tokens so they are easy to recognise (and
 // redact) in logs.
 const TokenPrefix = "tgk_"
 

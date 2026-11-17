@@ -1,4 +1,4 @@
-// Package observe exports Tollgate decisions as OpenTelemetry spans and
+// Package observe exports Roro decisions as OpenTelemetry spans and
 // metrics. Telemetry never carries tool arguments or results; only names,
 // decisions, reason codes, and ids.
 package observe
@@ -23,7 +23,7 @@ import (
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 )
 
-const scope = "github.com/timeomy/tollgate"
+const scope = "github.com/timeomy/roro"
 
 // Telemetry emits spans and metrics for tool calls.
 type Telemetry struct {
@@ -83,9 +83,9 @@ func Setup(ctx context.Context, cfg Config) (*Telemetry, error) {
 func New(tp trace.TracerProvider, mp metric.MeterProvider, shutdown func(context.Context) error) *Telemetry {
 	meter := mp.Meter(scope)
 	decisions, _ := meter.Int64Counter(MetricDecisions,
-		metric.WithDescription("Tool-call decisions made by Tollgate"))
+		metric.WithDescription("Tool-call decisions made by Roro"))
 	duration, _ := meter.Float64Histogram(MetricServerOperationDuration, metric.WithUnit("s"),
-		metric.WithDescription("Duration of MCP tools/call handling through Tollgate"),
+		metric.WithDescription("Duration of MCP tools/call handling through Roro"),
 		metric.WithExplicitBucketBoundaries(0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 30, 60, 120, 300))
 	if shutdown == nil {
 		shutdown = func(context.Context) error { return nil }
@@ -154,7 +154,7 @@ func (s *CallSpan) Decide(ctx context.Context, decision, reason string, policyID
 }
 
 // End finishes the span. errorType is "" on success, ErrorTypeToolError for
-// an isError result, or "tollgate.<reason>" for a blocked call.
+// an isError result, or "roro.<reason>" for a blocked call.
 func (s *CallSpan) End(ctx context.Context, errorType, message string) {
 	if errorType != "" {
 		s.span.SetAttributes(attribute.String(AttrErrorType, errorType))

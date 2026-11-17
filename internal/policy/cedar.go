@@ -12,7 +12,7 @@ import (
 	"github.com/cedar-policy/cedar-go"
 )
 
-// Annotation keys Tollgate understands on Cedar policies.
+// Annotation keys Roro understands on Cedar policies.
 const (
 	// AnnotationID names a policy: @id("deny-exec"). IDs appear in audit
 	// events. Without it a policy is named "<file>:<index>".
@@ -27,7 +27,7 @@ const (
 
 var reasonPattern = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 
-// policyMeta is what Tollgate reads from a policy's annotations.
+// policyMeta is what Roro reads from a policy's annotations.
 type policyMeta struct {
 	id       string
 	reason   string

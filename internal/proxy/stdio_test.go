@@ -13,7 +13,7 @@ import (
 )
 
 // TestRunStdioWithRealProcess runs RunStdio against the echo example server
-// over in-process pipes standing in for Tollgate's stdin/stdout.
+// over in-process pipes standing in for Roro's stdin/stdout.
 func TestRunStdioWithRealProcess(t *testing.T) {
 	bin := filepath.Join(t.TempDir(), "echo-server")
 	if runtime.GOOS == "windows" {

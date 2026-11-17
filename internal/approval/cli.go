@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 // Schema creates the approval queue table.
@@ -35,8 +35,8 @@ var Schema = []string{
 const timeFmt = time.RFC3339Nano
 
 // CLIApprover queues approval requests in the state database. A human
-// decides with `tollgate approvals watch` (interactive prompt) or
-// `tollgate approvals approve|deny ID`.
+// decides with `roro approvals watch` (interactive prompt) or
+// `roro approvals approve|deny ID`.
 type CLIApprover struct {
 	db   *sql.DB
 	poll time.Duration
@@ -129,7 +129,7 @@ func (a *CLIApprover) status(ctx context.Context, id string) (Result, bool, erro
 func (a *CLIApprover) finish(id string, st Status) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	res, err := a.db.ExecContext(ctx, `UPDATE approvals SET status=?, decided_by='tollgate', decided_at=? WHERE id=? AND status='pending'`,
+	res, err := a.db.ExecContext(ctx, `UPDATE approvals SET status=?, decided_by='roro', decided_at=? WHERE id=? AND status='pending'`,
 		st, a.now().UTC().Format(timeFmt), id)
 	if err != nil {
 		return false

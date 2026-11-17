@@ -17,7 +17,7 @@ import (
 // connection must still work.
 func TestAmbiguousParamsRefusedEndToEnd(t *testing.T) {
 	w := newWorkspace(t)
-	cmd := exec.Command(bins.tollgate, "--config", w.config, "wrap", "--agent", "test-agent", "--", bins.exfil)
+	cmd := exec.Command(bins.roro, "--config", w.config, "wrap", "--agent", "test-agent", "--", bins.exfil)
 	cmd.Env = append(os.Environ(), "DEMO_EXFIL_LOG="+w.exfil)
 	cmd.Stderr = testWriter{t}
 	stdin, err := cmd.StdinPipe()
@@ -58,7 +58,7 @@ func TestAmbiguousParamsRefusedEndToEnd(t *testing.T) {
 			select {
 			case m, ok := <-lines:
 				if !ok {
-					t.Fatal("tollgate closed stdout")
+					t.Fatal("roro closed stdout")
 				}
 				if m["id"] == id {
 					return m

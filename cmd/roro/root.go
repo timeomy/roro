@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/timeomy/tollgate/internal/config"
+	"github.com/timeomy/roro/internal/config"
 )
 
 type rootFlags struct {
@@ -20,27 +20,27 @@ type rootFlags struct {
 func newRootCmd() *cobra.Command {
 	flags := &rootFlags{}
 	cmd := &cobra.Command{
-		Use:   "tollgate",
+		Use:   "roro",
 		Short: "Security proxy for MCP tool calls",
-		Long: `Tollgate sits between an MCP client (Claude Desktop, Cursor, your own agent)
+		Long: `Roro sits between an MCP client (Claude Desktop, Cursor, your own agent)
 and an upstream MCP server. Every tool call is attributed to a named agent,
 checked against Cedar policy, optionally sent to a human for approval,
 recorded in a tamper-evident audit log, and can be stopped with a kill switch.
 
-Tollgate's own logs go to stderr. Stdout is reserved for MCP protocol traffic.
+Roro's own logs go to stderr. Stdout is reserved for MCP protocol traffic.
 
 Get started:
-  tollgate init                 write tollgate.yaml, a starter policy, and a signing key
-  tollgate wrap -- SERVER ...   proxy a stdio MCP server
-  tollgate logs                 see decisions
-  tollgate verify               check the audit log has not been tampered with`,
+  roro init                 write roro.yaml, a starter policy, and a signing key
+  roro wrap -- SERVER ...   proxy a stdio MCP server
+  roro logs                 see decisions
+  roro verify               check the audit log has not been tampered with`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 	cmd.PersistentFlags().StringVar(&flags.logLevel, "log-level", "info",
-		"log level for Tollgate's stderr logs: debug, info, warn, error")
+		"log level for Roro's stderr logs: debug, info, warn, error")
 	cmd.PersistentFlags().StringVarP(&flags.configPath, "config", "c", "",
-		"path to tollgate.yaml (default: $TOLLGATE_CONFIG, else ./tollgate.yaml)")
+		"path to roro.yaml (default: $RORO_CONFIG, else ./roro.yaml)")
 
 	cmd.AddCommand(
 		newInitCmd(flags), newWrapCmd(flags), newServeCmd(flags), newCheckCmd(flags),
@@ -59,18 +59,18 @@ func (f *rootFlags) newLogger() (*slog.Logger, error) {
 		return nil, fmt.Errorf("invalid --log-level %q: use debug, info, warn, or error", f.logLevel)
 	}
 	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})
-	return slog.New(h).With("component", "tollgate"), nil
+	return slog.New(h).With("component", "roro"), nil
 }
 
-// resolvedConfigPath applies the --config / $TOLLGATE_CONFIG / default order.
+// resolvedConfigPath applies the --config / $RORO_CONFIG / default order.
 func (f *rootFlags) resolvedConfigPath() string {
 	if f.configPath != "" {
 		return f.configPath
 	}
-	if env := os.Getenv("TOLLGATE_CONFIG"); env != "" {
+	if env := os.Getenv("RORO_CONFIG"); env != "" {
 		return env
 	}
-	return "tollgate.yaml"
+	return "roro.yaml"
 }
 
 // loadConfig loads and validates the config (fail closed).
@@ -79,7 +79,7 @@ func (f *rootFlags) loadConfig() (*config.Config, error) {
 	cfg, err := config.Load(p)
 	if err != nil {
 		if _, statErr := os.Stat(p); os.IsNotExist(statErr) {
-			return nil, fmt.Errorf("no config at %s: run `tollgate init` or pass --config", p)
+			return nil, fmt.Errorf("no config at %s: run `roro init` or pass --config", p)
 		}
 		return nil, err
 	}

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/timeomy/tollgate/internal/store"
+	"github.com/timeomy/roro/internal/store"
 )
 
 type fixture struct {
