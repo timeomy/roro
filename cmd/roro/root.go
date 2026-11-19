@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -30,6 +32,10 @@ recorded in a tamper-evident audit log, and can be stopped with a kill switch.
 Roro's own logs go to stderr. Stdout is reserved for MCP protocol traffic.
 
 Get started:
+  roro protect              protect the MCP servers your AI tools already use
+  roro unprotect            undo that
+
+Or set it up by hand:
   roro init                 write roro.yaml, a starter policy, and a signing key
   roro wrap -- SERVER ...   proxy a stdio MCP server
   roro logs                 see decisions
@@ -40,10 +46,10 @@ Get started:
 	cmd.PersistentFlags().StringVar(&flags.logLevel, "log-level", "info",
 		"log level for Roro's stderr logs: debug, info, warn, error")
 	cmd.PersistentFlags().StringVarP(&flags.configPath, "config", "c", "",
-		"path to roro.yaml (default: $RORO_CONFIG, else ./roro.yaml)")
+		"path to roro.yaml (default: $RORO_CONFIG, else ./roro.yaml, else ~/.roro/roro.yaml)")
 
 	cmd.AddCommand(
-		newInitCmd(flags), newWrapCmd(flags), newServeCmd(flags), newCheckCmd(flags),
+		newInitCmd(flags), newProtectCmd(), newUnprotectCmd(), newWrapCmd(flags), newServeCmd(flags), newCheckCmd(flags),
 		newVerifyCmd(flags), newLogsCmd(flags), newExportCmd(flags),
 		newKillCmd(flags), newResumeCmd(flags), newStatusCmd(flags),
 		newApprovalsCmd(flags), newPinsCmd(flags), newTokenCmd(),
@@ -70,7 +76,24 @@ func (f *rootFlags) resolvedConfigPath() string {
 	if env := os.Getenv("RORO_CONFIG"); env != "" {
 		return env
 	}
+	if _, err := os.Stat("roro.yaml"); errors.Is(err, os.ErrNotExist) {
+		if home := homeConfigPath(); home != "" {
+			if _, err := os.Stat(home); err == nil {
+				return home
+			}
+		}
+	}
 	return "roro.yaml"
+}
+
+// homeConfigPath is the config `roro protect` creates: ~/.roro/roro.yaml.
+// It is empty when the home directory is unknown.
+func homeConfigPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return ""
+	}
+	return filepath.Join(home, ".roro", "roro.yaml")
 }
 
 // loadConfig loads and validates the config (fail closed).

@@ -22,6 +22,18 @@ type agentFlags struct {
 	name, client, owner string
 }
 
+// serverName picks the upstream's name: --server, then the config or the
+// command's base name.
+func serverName(flag string, cfg *config.Config, command []string) (string, error) {
+	if flag == "" {
+		return app.ServerName(cfg, command)
+	}
+	if !config.ValidServerName(flag) {
+		return "", fmt.Errorf("invalid --server %q: use 1-64 letters, digits, '.', '_' or '-', starting with a letter or digit", flag)
+	}
+	return flag, nil
+}
+
 func (a *agentFlags) register(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&a.name, "agent", "", "agent name (default: $RORO_AGENT, else agent.name in config)")
 	cmd.Flags().StringVar(&a.client, "client", "", "agent client, e.g. cursor (default: agent.client in config)")
@@ -48,6 +60,7 @@ func (a *agentFlags) resolve(cfg *config.Config) (identity.Agent, error) {
 
 func newWrapCmd(root *rootFlags) *cobra.Command {
 	var af agentFlags
+	var server string
 	cmd := &cobra.Command{
 		Use:   "wrap [flags] -- COMMAND [ARGS...]",
 		Short: "Proxy a local stdio MCP server with policy enforcement",
@@ -67,14 +80,15 @@ or agent identity is missing or invalid.`,
 			if len(args) > 0 && cmd.ArgsLenAtDash() != 0 {
 				return errors.New(`put the upstream server command after "--", for example: roro wrap -- my-mcp-server`)
 			}
-			return runWrap(cmd.Context(), root, &af, args)
+			return runWrap(cmd.Context(), root, &af, server, args)
 		},
 	}
 	af.register(cmd)
+	cmd.Flags().StringVar(&server, "server", "", "name for the upstream server in policy, pins, and logs (default: upstream.name, else the command's base name)")
 	return cmd
 }
 
-func runWrap(ctx context.Context, root *rootFlags, af *agentFlags, command []string) error {
+func runWrap(ctx context.Context, root *rootFlags, af *agentFlags, serverFlag string, command []string) error {
 	logger, err := root.newLogger()
 	if err != nil {
 		return err
@@ -93,7 +107,7 @@ func runWrap(ctx context.Context, root *rootFlags, af *agentFlags, command []str
 	if err != nil {
 		return err
 	}
-	server, err := app.ServerName(cfg, command)
+	server, err := serverName(serverFlag, cfg, command)
 	if err != nil {
 		return err
 	}

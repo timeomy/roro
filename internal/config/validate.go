@@ -110,6 +110,10 @@ func (c *Config) validateHTTP(add func(string, ...any)) {
 	}
 }
 
+// ValidServerName reports whether name can identify an upstream server in
+// policy, pins, and logs.
+func ValidServerName(name string) bool { return serverNamePattern.MatchString(name) }
+
 func (c *Config) validateAgent() error {
 	if c.Agent.Name == "" {
 		return nil // may come from --agent / RORO_AGENT; checked at startup

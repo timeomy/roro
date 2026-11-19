@@ -14,7 +14,7 @@ log of each decision, and can stop an agent at any time.
 It is a standalone proxy for the Model Context Protocol (MCP). You do not
 change your client or your servers.
 
-> **Status: v0.2, pre-1.0.** The controls below are implemented and tested.
+> **Status: v0.3, pre-1.0.** The controls below are implemented and tested.
 > Read [what Roro is not](#what-roro-is-not) and the
 > [threat model](docs/threat-model.md) before relying on it.
 
@@ -49,20 +49,58 @@ any MCP server, without changing either:
   blocked until a human accepts it.
 - **OpenTelemetry**: decisions as spans and metrics (GenAI/MCP conventions).
 
-## Install
+## Protect your AI tools in one step
+
+You do not need to know what MCP is. If you use Claude Code, Claude Desktop,
+Cursor, Windsurf, or Codex with MCP servers, this puts Roro in front of all
+of them.
+
+macOS and Linux:
+
+```sh
+curl -fsSL https://www.roro.im/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://www.roro.im/install.ps1 | iex
+```
+
+The installer downloads Roro, checks the download, and runs `roro protect`.
+That command lists the MCP servers it found, asks before it changes
+anything, keeps a copy of every file it edits, and tells you which apps to
+restart. From then on:
+
+- every tool call your AI tools make is written to a signed log,
+- a tool call that carries a password or key is blocked,
+- `roro logs` shows what happened, and `roro kill` stops every agent at once,
+- `roro unprotect` puts everything back the way it was.
+
+Run `roro protect` again after you add a new MCP server. Quit your AI apps
+before you run it if you can, since some of them rewrite their settings while
+open.
+
+What it does not cover yet:
+
+- servers that run on the internet (a URL, not a program on your computer),
+- servers listed in a project's own `.mcp.json` file,
+- entries written in an unusual way; these are listed as skipped, never
+  guessed at.
+
+Two choices in this setup favour "keeps working" over "strictest":
+everything is allowed except leaking secrets, and when a server changes a
+tool's description the change is logged, not blocked. The stricter
+behaviour is one line each in `~/.roro/roro.yaml` and the policy file.
+
+The policy it installs allows everything except leaking secrets. To write
+stricter rules, see [docs/policy.md](docs/policy.md).
+
+## Install by hand
 
 **Download a binary.** Each [release](https://github.com/timeomy/roro/releases/latest)
 has static builds for Linux, macOS, and Windows (amd64 and arm64) and a
-`checksums.txt`. For example, on an Apple Silicon Mac:
-
-```sh
-curl -fsSLO https://github.com/timeomy/roro/releases/download/v0.2.2/roro_0.2.2_darwin_arm64.tar.gz
-curl -fsSLO https://github.com/timeomy/roro/releases/download/v0.2.2/checksums.txt
-shasum -a 256 --ignore-missing -c checksums.txt
-tar -xzf roro_0.2.2_darwin_arm64.tar.gz
-sudo mv roro_0.2.2_darwin_arm64/roro /usr/local/bin/
-roro version
-```
+`checksums.txt`. Unpack it and put `roro` somewhere on your `PATH`.
 
 The binaries are not code-signed. On macOS, a binary downloaded with a
 browser is quarantined; `curl` downloads are not. To clear it:
@@ -74,7 +112,7 @@ browser is quarantined; `curl` downloads are not. To clear it:
 go install github.com/timeomy/roro/cmd/roro@latest
 ```
 
-## 60-second quickstart
+## Set it up by hand
 
 ```sh
 mkdir -p ~/roro && cd ~/roro

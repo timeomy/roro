@@ -1,0 +1,50 @@
+name: install
+
+# Runs the one-line installers against the latest published release on
+# every supported operating system.
+on:
+  push:
+    branches: [main]
+    paths: ["scripts/install.sh", "scripts/install.ps1", ".github/workflows/install.yml"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: install
+        env:
+          RORO_INSTALL_DIR: ${{ runner.temp }}/roro-bin
+          RORO_NO_PROTECT: "1"
+        run: |
+          sh scripts/install.sh
+          "$RORO_INSTALL_DIR/roro" version
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: install
+        shell: pwsh
+        env:
+          RORO_INSTALL_DIR: ${{ runner.temp }}\roro-bin
+          RORO_NO_PROTECT: "1"
+        run: |
+          ./scripts/install.ps1
+          & "$env:RORO_INSTALL_DIR\roro.exe" version
+      - name: install (Windows PowerShell 5.1)
+        shell: powershell
+        env:
+          RORO_INSTALL_DIR: ${{ runner.temp }}\roro-bin51
+          RORO_NO_PROTECT: "1"
+        run: |
+          ./scripts/install.ps1
+          & "$env:RORO_INSTALL_DIR\roro.exe" version
