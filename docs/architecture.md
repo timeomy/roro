@@ -92,7 +92,7 @@ HTTP transport at `/mcp`:
   created it; another agent's token gets `404`.
 - Browser `Origin` headers other than loopback (or `http.allowed_origins`)
   are rejected (DNS-rebinding defence).
-- `GET` returns `405`: v0.1 does not offer the optional server-to-client
+- `GET` returns `405`: v0.2 does not offer the optional server-to-client
   event stream. Upstream-initiated requests other than `ping` are answered
   with "method not found"; upstream notifications are dropped. Use stdio mode
   for servers that need sampling or elicitation.
@@ -123,7 +123,7 @@ type, which Roro does not use, so Roro implements the handler.
 - Arguments are stored only as a redacted preview (512 bytes) and the
   SHA-256 of the full redacted JSON. Results are stored only as a SHA-256
   digest.
-- Key rotation is not implemented in v0.1. `init` refuses to overwrite a key.
+- Key rotation is not implemented in v0.2. `init` refuses to overwrite a key.
 
 ## Identity
 

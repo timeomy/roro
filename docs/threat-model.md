@@ -131,7 +131,7 @@ tools). Assets:
 - Calls made before the client lists tools are checked against
   `pin_status: unknown` and are not blocked by pinning.
 - HTTP mode does not carry server-initiated requests or notifications
-  (no GET stream) in v0.1.
+  (no GET stream) in v0.2.
 - Approval: the human sees redacted arguments. A secret-bearing argument
   shows as `[REDACTED...]`, and anything under a secret-looking key (for
   example `x_token`) is hidden entirely; the prompt then prints a warning
@@ -145,7 +145,7 @@ tools). Assets:
   That helps the model explain a block to the user, and also tells a
   probing agent which rule stopped it.
 
-## Out of scope for v0.1
+## Out of scope for v0.2
 
 Prompt-injection classifiers (for example NeMo Guardrails, LlamaFirewall,
 Prompt Shields), memory and context poisoning, agent-to-agent protocols, and

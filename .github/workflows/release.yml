@@ -1,0 +1,46 @@
+name: release
+
+# Pushing a tag like v0.2.1 builds static binaries for six platforms and
+# publishes them, with SHA-256 checksums, as a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: test
+        run: go test -count=1 ./...
+      - name: build archives
+        env:
+          CGO_ENABLED: "0"
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os=${target%/*}; arch=${target#*/}
+            name="roro_${VERSION#v}_${os}_${arch}"
+            bin=roro; [ "$os" = windows ] && bin=roro.exe
+            mkdir -p "build/$name"
+            GOOS=$os GOARCH=$arch go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o "build/$name/$bin" ./cmd/roro
+            cp LICENSE NOTICE README.md "build/$name/"
+            if [ "$os" = windows ]; then
+              (cd build && zip -qr "../dist/$name.zip" "$name")
+            else
+              tar -C build -czf "dist/$name.tar.gz" "$name"
+            fi
+          done
+          (cd dist && sha256sum * > checksums.txt)
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag

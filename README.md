@@ -4,7 +4,7 @@ Roro is a standalone MCP proxy that enforces per-agent permissions,
 optional human approval, a tamper-evident audit log, and a kill switch for
 tool calls.
 
-> **Status: v0.1, pre-1.0.** The controls below are implemented and tested.
+> **Status: v0.2, pre-1.0.** The controls below are implemented and tested.
 > Read [what Roro is not](#what-roro-is-not) and the
 > [threat model](docs/threat-model.md) before relying on it.
 
@@ -39,23 +39,44 @@ any MCP server, without changing either:
   blocked until a human accepts it.
 - **OpenTelemetry**: decisions as spans and metrics (GenAI/MCP conventions).
 
-## 60-second quickstart
+## Install
 
-Requires Go 1.27+.
+**Download a binary.** Each [release](https://github.com/timeomy/roro/releases/latest)
+has static builds for Linux, macOS, and Windows (amd64 and arm64) and a
+`checksums.txt`. For example, on an Apple Silicon Mac:
 
 ```sh
-git clone https://github.com/timeomy/roro && cd roro
-go build -o bin/roro ./cmd/roro
+curl -fsSLO https://github.com/timeomy/roro/releases/download/v0.2.1/roro_0.2.1_darwin_arm64.tar.gz
+curl -fsSLO https://github.com/timeomy/roro/releases/download/v0.2.1/checksums.txt
+shasum -a 256 --ignore-missing -c checksums.txt
+tar -xzf roro_0.2.1_darwin_arm64.tar.gz
+sudo mv roro_0.2.1_darwin_arm64/roro /usr/local/bin/
+roro version
+```
 
+The binaries are not code-signed. On macOS, a binary downloaded with a
+browser is quarantined; `curl` downloads are not. To clear it:
+`xattr -d com.apple.quarantine roro`.
+
+**Or build with Go 1.27+:**
+
+```sh
+go install github.com/timeomy/roro/cmd/roro@latest
+```
+
+## 60-second quickstart
+
+```sh
 mkdir -p ~/roro && cd ~/roro
-/path/to/bin/roro init --agent my-agent   # config, starter policy, signing key
-/path/to/bin/roro check                   # validate everything
+roro init --agent my-agent   # config, starter policy, signing key
+roro check                   # validate everything
 ```
 
 Then see it stop an attack (builds everything into a temp dir, no network):
 
 ```sh
-./scripts/demo.sh
+git clone https://github.com/timeomy/roro && cd roro
+./scripts/demo.sh   # requires Go
 ```
 
 A scripted agent reads a file containing a planted prompt injection and then

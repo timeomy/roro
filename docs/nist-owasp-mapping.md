@@ -1,6 +1,6 @@
 # Mapping to OWASP and NIST
 
-This maps Roro v0.1 controls to two public frameworks. Each row says
+This maps Roro v0.2 controls to two public frameworks. Each row says
 whether the control is **enforced** by code (and tested), **partial**, or
 **documented only / out of scope**. Where Roro does nothing, it says so.
 
@@ -16,7 +16,7 @@ Sources (read 2026-11-16):
 
 ## OWASP Top 10 for Agentic Applications (2026)
 
-| ID | Risk | Roro v0.1 | Status | Evidence |
+| ID | Risk | Roro v0.2 | Status | Evidence |
 |---|---|---|---|---|
 | ASI01 | Agent Goal Hijack | No detection of hijacked goals. If a hijacked agent calls a tool, the call is still checked against policy, so the damage is bounded by what the agent is allowed to do. | Partial | `tests/attack_exfil_test.go` |
 | ASI02 | Tool Misuse | Default-deny Cedar policy with allow / deny / require-approval; argument rules (cleaned paths, URL hosts, numeric bounds, regex matchers); per-agent and per-tool rate limits. Attack demo: an injected instruction to call an exfiltration tool is denied and logged. | Enforced | `internal/policy/cedar_test.go`, `internal/gate/gate_test.go`, `tests/attack_exfil_test.go`, `scripts/demo.sh` |
@@ -31,7 +31,7 @@ Sources (read 2026-11-16):
 
 ## NIST design tenets for agent identity management
 
-| # | Tenet (NIST heading) | Roro v0.1 | Status |
+| # | Tenet (NIST heading) | Roro v0.2 | Status |
 |---|---|---|---|
 | 01 | Distinct Agent Identification | Each agent has its own principal (`Roro::Agent::"name"`) used in every decision and audit event. HTTP agents have distinct tokens. Identities are names and bearer tokens, not cryptographically verifiable workload identities. | Partial |
 | 02 | Agent Linking, Delegation & Attenuation | Agents carry an `owner` attribute available to policy and logged at session start. No delegation chains or attenuation to sub-agents. | Documented only |
