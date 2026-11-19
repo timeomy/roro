@@ -56,7 +56,10 @@ That command lists the MCP servers it found, asks before it changes
 anything, keeps a copy of every file it edits, and tells you which apps to
 restart.
 
-<img src="assets/protect.svg" width="860" alt="Terminal output of roro protect: two Cursor servers are protected and one remote server is skipped">
+<img src="assets/demo.gif" width="860" alt="Roro demo in a terminal: roro protect puts Roro in front of a Cursor server, roro logs shows two allowed tool calls and one blocked because it carried a key, roro kill stops every agent, and the next call is denied">
+
+The recording is a real run against a small stand-in server;
+[scripts/demo-gif](scripts/demo-gif/make.py) reproduces it.
 
 <details>
 <summary><b>Read the installer before you run it</b></summary>
