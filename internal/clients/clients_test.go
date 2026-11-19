@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -296,7 +297,7 @@ func TestLocations(t *testing.T) {
 	mac := Locations("/Users/me", "darwin", "")
 	byClient := map[string]string{}
 	for _, l := range mac {
-		byClient[l.Client] = l.Path
+		byClient[l.Client] = filepath.ToSlash(l.Path) // the expectations below use "/"
 	}
 	for client, want := range map[string]string{
 		"claude-code":    "/Users/me/.claude.json",
