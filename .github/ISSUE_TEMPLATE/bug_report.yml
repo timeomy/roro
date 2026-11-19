@@ -1,0 +1,56 @@
+name: Bug report
+description: Something does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security issue?** Stop here and follow SECURITY.md instead.
+        Remove passwords, keys, and tokens from anything you paste.
+  - type: input
+    id: version
+    attributes:
+      label: Roro version
+      description: Output of `roro version`
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: AI tool
+      options:
+        - Claude Code
+        - Claude Desktop
+        - Cursor
+        - Windsurf
+        - Codex
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command or step that failed
+      description: For example `roro protect`, or "a tool call in Cursor"
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: Paste the full output. `roro logs --decision deny` helps if a call was blocked.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Config and policy
+      description: Your `roro.yaml` and policy file, if you changed them.
+      render: yaml

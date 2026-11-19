@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a change
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to do, and why Roro does not cover it today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: textarea
+    id: threat
+    attributes:
+      label: Threat model impact
+      description: Which risk it addresses. Does it change what is enforced?

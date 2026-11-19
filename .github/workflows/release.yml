@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-go@v7.0.0
         with:
           go-version-file: go.mod
+      - name: changelog and citation name this version
+        run: scripts/release-notes.sh check "$GITHUB_REF_NAME"
       - name: test
         run: go test -count=1 ./...
       - name: build archives
@@ -43,4 +45,8 @@ jobs:
       - name: publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        run: |
+          scripts/release-notes.sh notes "$GITHUB_REF_NAME" > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "$(scripts/release-notes.sh title "$GITHUB_REF_NAME")" \
+            --notes-file notes.md --verify-tag

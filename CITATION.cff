@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: Roro
+message: >-
+  If you use this software, please cite it using the metadata from this file.
+type: software
+authors:
+  - given-names: Jabez
+    family-names: Kok
+abstract: >-
+  Roro is a standalone security proxy for the Model Context Protocol (MCP).
+  It checks every tool call an AI agent makes against Cedar policy, can ask a
+  person before a risky call runs, keeps a hash-chained and signed audit log,
+  and can stop an agent at any time.
+repository-code: 'https://github.com/timeomy/roro'
+url: 'https://www.roro.im'
+license: Apache-2.0
+version: 0.3.0
+date-released: '2026-11-19'
+keywords:
+  - model-context-protocol
+  - mcp
+  - ai-agents
+  - security
+  - cedar
+  - audit-log

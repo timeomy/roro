@@ -38,4 +38,17 @@ and commit `third_party/LICENSES.txt`.
 Conventional commit prefixes (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`,
 `chore:`). Fill in the pull request template, including how you tested.
 
+## Cutting a release
+
+1. Add a section at the top of [CHANGELOG.md](CHANGELOG.md):
+   `## 0.4.0 (2026-12-01): One line on what the release is about`. Write it
+   for the person updating, not for the commit log. Put anything they must
+   check after updating under "Good to know".
+2. Set `version` and `date-released` in [CITATION.cff](CITATION.cff).
+3. Tag and push: `git tag v0.4.0 && git push origin v0.4.0`.
+
+The release workflow refuses to publish if the changelog has no section for
+the tag or the citation file names another version. The release title and
+notes come from the changelog section.
+
 By contributing you agree your contribution is licensed under Apache-2.0.

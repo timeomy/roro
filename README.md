@@ -1,22 +1,196 @@
-<p>
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
     <img src="assets/logo.svg" alt="Roro" width="220">
   </picture>
 </p>
 
+<p align="center">
+  <b>A safety check between your AI tools and what they can do.</b><br>
+  It logs every tool call, blocks leaked passwords and keys, and stops an agent when you say so.
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#what-you-get">What you get</a> ·
+  <a href="#faq">FAQ</a> ·
+  <a href="#why-it-exists">Why it exists</a> ·
+  <a href="#documentation">Docs</a> ·
+  <a href="https://www.roro.im">Website</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/timeomy/roro/actions/workflows/ci.yml"><img src="https://github.com/timeomy/roro/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/timeomy/roro/releases/latest"><img src="https://img.shields.io/github/v/release/timeomy/roro" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+  <a href="https://pkg.go.dev/github.com/timeomy/roro"><img src="https://pkg.go.dev/badge/github.com/timeomy/roro.svg" alt="Go reference"></a>
+</p>
+
 # Roro
 
-Roro sits between your AI agent and its tools. It checks every tool call
-against your rules, can ask a person before a risky one runs, keeps a signed
-log of each decision, and can stop an agent at any time.
-
-It is a standalone proxy for the Model Context Protocol (MCP). You do not
-change your client or your servers.
+**Roro is a free, open source security proxy for AI agents.** It sits between
+your AI tool (Claude Code, Claude Desktop, Cursor, Windsurf, Codex) and the
+MCP servers it uses. You do not change your AI tool or your servers, and you
+do not need to know what MCP is.
 
 > **Status: v0.3, pre-1.0.** The controls below are implemented and tested.
 > Read [what Roro is not](#what-roro-is-not) and the
 > [threat model](docs/threat-model.md) before relying on it.
+
+## Install
+
+macOS and Linux:
+
+```sh
+curl -fsSL https://www.roro.im/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://www.roro.im/install.ps1 | iex
+```
+
+The installer downloads Roro, checks the download, and runs `roro protect`.
+That command lists the MCP servers it found, asks before it changes
+anything, keeps a copy of every file it edits, and tells you which apps to
+restart.
+
+<img src="assets/protect.svg" width="860" alt="Terminal output of roro protect: two Cursor servers are protected and one remote server is skipped">
+
+<details>
+<summary><b>Read the installer before you run it</b></summary>
+<br>
+
+```sh
+curl -fsSL https://www.roro.im/install.sh -o install.sh
+less install.sh
+sh install.sh
+```
+
+The same script is in this repository at
+[scripts/install.sh](scripts/install.sh), and the Windows one at
+[scripts/install.ps1](scripts/install.ps1). Set `RORO_NO_PROTECT=1` to
+install Roro without touching any settings, then run
+`roro protect --dry-run` to see what it would change.
+
+</details>
+
+<details>
+<summary><b>Download a binary or build from source</b></summary>
+<br>
+
+Each [release](https://github.com/timeomy/roro/releases/latest) has static
+builds for Linux, macOS, and Windows (amd64 and arm64) and a
+`checksums.txt`. Unpack it and put `roro` somewhere on your `PATH`.
+
+The binaries are not code-signed. On macOS, a binary downloaded with a
+browser is quarantined; `curl` downloads are not. To clear it:
+`xattr -d com.apple.quarantine roro`.
+
+Or build with Go 1.27+:
+
+```sh
+go install github.com/timeomy/roro/cmd/roro@latest
+```
+
+</details>
+
+## What you get
+
+- **A signed log.** Every tool call your AI tools make is written down.
+  `roro logs` shows it, and `roro verify` proves nobody changed it.
+- **Leaked secrets are blocked.** A tool call that carries a password or key
+  never reaches the server.
+- **A stop button.** `roro kill` stops every agent at the next tool call.
+- **Your own rules, when you want them.** Allow, deny, or ask a person, per
+  agent and per tool. See [docs/policy.md](docs/policy.md).
+- **An undo.** `roro unprotect` puts every file back the way it was.
+
+Run `roro protect` again after you add a new MCP server. Quit your AI apps
+before you run it if you can, since some of them rewrite their settings while
+open.
+
+What it does not cover yet:
+
+- servers that run on the internet (a URL, not a program on your computer),
+- servers listed in a project's own `.mcp.json` file,
+- entries written in an unusual way; these are listed as skipped, never
+  guessed at.
+
+Two choices in this setup favour "keeps working" over "strictest":
+everything is allowed except leaking secrets, and when a server changes a
+tool's description the change is logged, not blocked. The stricter
+behaviour is one line each in `~/.roro/roro.yaml` and the policy file.
+
+## FAQ
+
+<details>
+<summary><b>Do I need to know what MCP is?</b></summary>
+<br>
+
+No. MCP is how AI tools plug in extra abilities, such as reading files or
+calling GitHub. If your AI tool has any of those set up, `roro protect`
+finds them for you.
+
+</details>
+
+<details>
+<summary><b>Is it free?</b></summary>
+<br>
+
+Yes. Roro is Apache-2.0 licensed. There is no account, no paid tier, and no
+usage limit.
+
+</details>
+
+<details>
+<summary><b>Does my data leave my computer?</b></summary>
+<br>
+
+Not through Roro. The log, the rules, and the signing key stay on your
+computer, and Roro has no usage tracking. It only sends anything out if you
+turn on telemetry and give it an address, and tool arguments are never
+included. See [PRIVACY.md](PRIVACY.md).
+
+</details>
+
+<details>
+<summary><b>Will it break my tools?</b></summary>
+<br>
+
+The setup `roro protect` installs allows everything except a call that
+carries a password or key. If something stops working,
+`roro logs --decision deny` shows what was blocked and why, and
+`roro unprotect` turns Roro off again. See
+[troubleshooting](docs/troubleshooting.md).
+
+</details>
+
+<details>
+<summary><b>Does it stop prompt injection?</b></summary>
+<br>
+
+It does not detect it. Roro limits what an agent can do after it has been
+tricked: the call still has to pass your rules, and it is still logged. See
+[what Roro is not](#what-roro-is-not).
+
+</details>
+
+<details>
+<summary><b>How do I remove it?</b></summary>
+<br>
+
+```sh
+roro unprotect          # put your AI tools' settings back
+rm ~/.local/bin/roro    # remove the program
+rm -r ~/.roro           # remove the config, the log, and the signing key
+```
+
+On Windows the program is in `%LOCALAPPDATA%\Programs\roro`. Keep
+`~/.roro` if you want to keep the log.
+
+</details>
 
 ## Why it exists
 
@@ -48,69 +222,6 @@ any MCP server, without changing either:
 - **Tool pinning**: a tool whose description or schema changes is hidden and
   blocked until a human accepts it.
 - **OpenTelemetry**: decisions as spans and metrics (GenAI/MCP conventions).
-
-## Protect your AI tools in one step
-
-You do not need to know what MCP is. If you use Claude Code, Claude Desktop,
-Cursor, Windsurf, or Codex with MCP servers, this puts Roro in front of all
-of them.
-
-macOS and Linux:
-
-```sh
-curl -fsSL https://www.roro.im/install.sh | sh
-```
-
-Windows (PowerShell):
-
-```powershell
-irm https://www.roro.im/install.ps1 | iex
-```
-
-The installer downloads Roro, checks the download, and runs `roro protect`.
-That command lists the MCP servers it found, asks before it changes
-anything, keeps a copy of every file it edits, and tells you which apps to
-restart. From then on:
-
-- every tool call your AI tools make is written to a signed log,
-- a tool call that carries a password or key is blocked,
-- `roro logs` shows what happened, and `roro kill` stops every agent at once,
-- `roro unprotect` puts everything back the way it was.
-
-Run `roro protect` again after you add a new MCP server. Quit your AI apps
-before you run it if you can, since some of them rewrite their settings while
-open.
-
-What it does not cover yet:
-
-- servers that run on the internet (a URL, not a program on your computer),
-- servers listed in a project's own `.mcp.json` file,
-- entries written in an unusual way; these are listed as skipped, never
-  guessed at.
-
-Two choices in this setup favour "keeps working" over "strictest":
-everything is allowed except leaking secrets, and when a server changes a
-tool's description the change is logged, not blocked. The stricter
-behaviour is one line each in `~/.roro/roro.yaml` and the policy file.
-
-The policy it installs allows everything except leaking secrets. To write
-stricter rules, see [docs/policy.md](docs/policy.md).
-
-## Install by hand
-
-**Download a binary.** Each [release](https://github.com/timeomy/roro/releases/latest)
-has static builds for Linux, macOS, and Windows (amd64 and arm64) and a
-`checksums.txt`. Unpack it and put `roro` somewhere on your `PATH`.
-
-The binaries are not code-signed. On macOS, a binary downloaded with a
-browser is quarantined; `curl` downloads are not. To clear it:
-`xattr -d com.apple.quarantine roro`.
-
-**Or build with Go 1.27+:**
-
-```sh
-go install github.com/timeomy/roro/cmd/roro@latest
-```
 
 ## Set it up by hand
 
@@ -275,6 +386,9 @@ results are never exported. The GenAI conventions are still marked
 - [docs/threat-model.md](docs/threat-model.md): what is defended, known limits
 - [docs/nist-owasp-mapping.md](docs/nist-owasp-mapping.md): OWASP Agentic Top 10
   and NIST agent-identity tenets, enforced vs. documented only
+- [docs/troubleshooting.md](docs/troubleshooting.md): common problems and fixes
+- [CHANGELOG.md](CHANGELOG.md): what changed in each release
+- [PRIVACY.md](PRIVACY.md): what stays on your computer
 - [SECURITY.md](SECURITY.md): reporting vulnerabilities
 
 ## Tests
@@ -296,6 +410,13 @@ including the prompt-injection exfiltration scenario.
 - Not a hosted service, dashboard, SSO product, or multi-tenant control plane.
 - Not complete protection on its own: pair it with least-privilege servers,
   sandboxing, and review of the tools you permit.
+
+## Contributing and citing
+
+Contributions are welcome: read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+Questions and ideas go in
+[Discussions](https://github.com/timeomy/roro/discussions). To cite Roro, use
+[CITATION.cff](CITATION.cff) or the "Cite this repository" button on GitHub.
 
 ## License
 

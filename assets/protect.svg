@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 408" width="860" height="408" role="img" aria-label="Terminal output of roro protect: two Cursor servers are protected and one remote server is skipped">
+<rect width="860" height="408" rx="10" fill="#0d1117"/>
+<circle cx="22" cy="22" r="6" fill="#ff5f57"/><circle cx="42" cy="22" r="6" fill="#febc2e"/><circle cx="62" cy="22" r="6" fill="#28c840"/>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14">
+<text x="22" y="64" fill="#ffffff">$ roro protect --yes</text>
+<text x="22" y="86" fill="#c9d1d9">Roro found these MCP servers:</text>
+<text x="22" y="130" fill="#c9d1d9">  Cursor  (~/.cursor/mcp.json)</text>
+<text x="22" y="152" fill="#7ee787">    filesystem               will be protected</text>
+<text x="22" y="174" fill="#7ee787">    github                   will be protected</text>
+<text x="22" y="196" fill="#8b949e">    docs                     skipped: it runs on the internet, not on this computer</text>
+<text x="22" y="240" fill="#c9d1d9">Roro will put itself in front of 2 servers. A copy of each file is kept next to it.</text>
+<text x="22" y="284" fill="#c9d1d9">Done. Restart Cursor so the change takes effect.</text>
+<text x="22" y="328" fill="#c9d1d9">  roro logs        see what your AI tools did</text>
+<text x="22" y="350" fill="#c9d1d9">  roro kill        stop every agent right now</text>
+<text x="22" y="372" fill="#c9d1d9">  roro unprotect   undo this</text>
+</g></svg>
