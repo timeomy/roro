@@ -54,6 +54,9 @@ func newEnv(t *testing.T, mutate ...func(*Deps)) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Windows cannot remove the temp dir while the database is open.
+	opened := e.auditLog
+	t.Cleanup(func() { _ = opened.Close() })
 	stateDB, err := store.Open(ctx, filepath.Join(dir, "state.db"), append(append(killswitch.Schema, pin.Schema...), approval.Schema...)...)
 	if err != nil {
 		t.Fatal(err)

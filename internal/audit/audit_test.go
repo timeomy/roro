@@ -39,6 +39,8 @@ func newFixture(t *testing.T, every int) *fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Windows cannot remove the temp dir while the database is open.
+	t.Cleanup(func() { _ = l.Close() })
 	return &fixture{dir: dir, log: l, signer: signer, pubKey: keyPath + ".pub"}
 }
 
