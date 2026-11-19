@@ -1,3 +1,10 @@
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo.svg" alt="Roro" width="220">
+  </picture>
+</p>
+
 # Roro
 
 Roro is a standalone MCP proxy that enforces per-agent permissions,
