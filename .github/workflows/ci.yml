@@ -20,6 +20,9 @@ jobs:
         run: |
           unformatted=$(gofmt -l .)
           if [ -n "$unformatted" ]; then echo "needs gofmt:"; echo "$unformatted"; exit 1; fi
+      - name: no typographic dashes
+        run: |
+          if git grep -nP '[\x{2013}\x{2014}]' -- . ':!go.sum'; then echo "replace en/em dashes with plain punctuation"; exit 1; fi
       - name: go vet
         run: go vet ./...
       - name: go mod tidy is clean

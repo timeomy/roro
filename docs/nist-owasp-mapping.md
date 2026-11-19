@@ -6,7 +6,7 @@ whether the control is **enforced** by code (and tested), **partial**, or
 
 Sources (read 2026-11-16):
 
-- OWASP GenAI Security Project, "OWASP Top 10 for Agentic Applications – The
+- OWASP GenAI Security Project, "OWASP Top 10 for Agentic Applications: The
   Benchmark for Agentic Security in the Age of Autonomous AI", 9 December 2025.
   <https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/>
 - NIST Cybersecurity Insights blog, "Design Tenets for Agent Identity
@@ -23,8 +23,8 @@ Sources (read 2026-11-16):
 | ASI03 | Identity & Privilege Abuse | Every decision is attributed to a named agent principal; policies are per agent; no standing broad access (default deny); HTTP agents authenticate with per-agent tokens and sessions are bound to them. | Enforced (stdio identity is configuration-asserted, see threat model) | `internal/identity`, `internal/proxy/http_test.go`, `tests/http_test.go` |
 | ASI04 | Agentic Supply Chain Vulnerabilities | Tool-definition pinning: name, description, schemas, and annotations are hashed on first sight; a later change hides the tool and blocks calls until a human accepts it. Does not vet a server the first time (trust on first use) or verify server binaries. | Partial | `internal/pin/pin_test.go`, `internal/gate/pin_test.go`, `tests/controls_test.go` |
 | ASI05 | Unexpected Code Execution | Execution-style tools (`*exec*`, `*shell*`, `*run_command*`) are forbidden by the starter policy unless an explicit exception is written; everything else is default-deny. Name matching is heuristic. Roro does not sandbox the server. | Partial | `internal/policy/cedar_test.go` |
-| ASI06 | Memory & Context Poisoning | Not addressed. Roro does not see or filter model context or memory. | Out of scope | — |
-| ASI07 | Insecure Inter-Agent Communication | Not addressed. Roro is an MCP tool gateway, not an agent-to-agent protocol layer. | Out of scope | — |
+| ASI06 | Memory & Context Poisoning | Not addressed. Roro does not see or filter model context or memory. | Out of scope | None |
+| ASI07 | Insecure Inter-Agent Communication | Not addressed. Roro is an MCP tool gateway, not an agent-to-agent protocol layer. | Out of scope | None |
 | ASI08 | Cascading Failures | Rate limits in policy; fail-closed config and policy loading; a call that cannot be audited is denied; kill switch stops all agents at the next call. | Enforced | `internal/config/config_test.go`, `internal/gate/gate_test.go` (`TestAuditFailureFailsClosed`), `tests/controls_test.go` |
 | ASI09 | Human-Agent Trust Exploitation | Approval requests show the actual tool name and arguments (secrets redacted, with a warning when values are hidden), never a model-written rationale; the gate forwards exactly the parsed call the human saw; no answer before the timeout denies; decisions are audited with the approver. A human can still approve a harmful call. | Enforced (UX) | `internal/approval/cli_test.go`, `tests/controls_test.go` (`TestHumanApprovalViaCLI`) |
 | ASI10 | Rogue Agents | Global and per-agent kill switch, effective on the next call in every Roro process, persistent across restarts; resume is explicit and logged. | Enforced | `internal/killswitch/killswitch_test.go`, `tests/controls_test.go` (`TestKillSwitchAcrossProcesses`) |

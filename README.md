@@ -53,11 +53,11 @@ has static builds for Linux, macOS, and Windows (amd64 and arm64) and a
 `checksums.txt`. For example, on an Apple Silicon Mac:
 
 ```sh
-curl -fsSLO https://github.com/timeomy/roro/releases/download/v0.2.1/roro_0.2.1_darwin_arm64.tar.gz
-curl -fsSLO https://github.com/timeomy/roro/releases/download/v0.2.1/checksums.txt
+curl -fsSLO https://github.com/timeomy/roro/releases/download/v0.2.2/roro_0.2.2_darwin_arm64.tar.gz
+curl -fsSLO https://github.com/timeomy/roro/releases/download/v0.2.2/checksums.txt
 shasum -a 256 --ignore-missing -c checksums.txt
-tar -xzf roro_0.2.1_darwin_arm64.tar.gz
-sudo mv roro_0.2.1_darwin_arm64/roro /usr/local/bin/
+tar -xzf roro_0.2.2_darwin_arm64.tar.gz
+sudo mv roro_0.2.2_darwin_arm64/roro /usr/local/bin/
 roro version
 ```
 

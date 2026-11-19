@@ -8,8 +8,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// version is set at build time with -ldflags "-X main.version=v0.1.0".
+// version is set at build time with -ldflags "-X main.version=v0.2.2".
+// Builds made with "go install module@version" fall back to the module
+// version recorded in the binary.
 var version = "dev"
+
+func init() {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		version = resolveVersion(version, info.Main.Version)
+	}
+}
+
+// resolveVersion prefers the ldflags value and otherwise uses the module
+// version, which is empty or "(devel)" for a local build.
+func resolveVersion(ldflag, module string) string {
+	if ldflag != "dev" || module == "" || module == "(devel)" {
+		return ldflag
+	}
+	return module
+}
 
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
