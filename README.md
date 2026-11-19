@@ -7,9 +7,12 @@
 
 # Roro
 
-Roro is a standalone MCP proxy that enforces per-agent permissions,
-optional human approval, a tamper-evident audit log, and a kill switch for
-tool calls.
+Roro sits between your AI agent and its tools. It checks every tool call
+against your rules, can ask a person before a risky one runs, keeps a signed
+log of each decision, and can stop an agent at any time.
+
+It is a standalone proxy for the Model Context Protocol (MCP). You do not
+change your client or your servers.
 
 > **Status: v0.2, pre-1.0.** The controls below are implemented and tested.
 > Read [what Roro is not](#what-roro-is-not) and the
