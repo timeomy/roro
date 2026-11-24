@@ -84,7 +84,11 @@ func (st Style) sev(s Severity) string {
 // the summary but not listed, so the default view stays short.
 func WriteText(w io.Writer, reports []FileReport, min Severity, st Style) {
 	for _, f := range reports {
-		fmt.Fprintf(w, "\n%s  %s\n", st.paint("1", f.Label), st.paint("2", st.c(f.Path)))
+		header := st.paint("1", f.Label)
+		if f.Path != "" {
+			header += "  " + st.paint("2", st.c(f.Path))
+		}
+		fmt.Fprintf(w, "\n%s\n", header)
 		if f.Error != "" {
 			fmt.Fprintf(w, "  %s\n", st.c(f.Error))
 			continue
@@ -133,9 +137,9 @@ func writeServer(w io.Writer, s ServerReport, min Severity, st Style) {
 }
 
 func writeSummary(w io.Writer, sum Summary, min Severity, st Style) {
-	fmt.Fprintf(w, "\nScanned %s in %s. ", count(sum.Servers, "server"), count(sum.Files, "file"))
+	line := []string{fmt.Sprintf("Scanned %s in %s.", count(sum.Servers, "server"), count(sum.Files, "file"))}
 	if sum.Unreadable > 0 {
-		fmt.Fprintf(w, "%s could not be read. ", count(sum.Unreadable, "file"))
+		line = append(line, count(sum.Unreadable, "file")+" could not be read.")
 	}
 	parts := []string{}
 	for _, s := range []Severity{High, Medium, Low, Info} {
@@ -143,15 +147,16 @@ func writeSummary(w io.Writer, sum Summary, min Severity, st Style) {
 			parts = append(parts, fmt.Sprintf("%d %s", n, s))
 		}
 	}
+	switch {
+	case len(parts) > 0:
+		line = append(line, "Found "+strings.Join(parts, ", ")+".")
+	case sum.Unreadable == 0:
+		line = append(line, st.paint("32", "No issues found."))
+	}
+	fmt.Fprintf(w, "\n%s\n", strings.Join(line, " "))
 	if len(parts) == 0 {
-		if sum.Unreadable > 0 {
-			fmt.Fprintln(w)
-		} else {
-			fmt.Fprintln(w, st.paint("32", "No issues found."))
-		}
 		return
 	}
-	fmt.Fprintf(w, "Found %s.\n", strings.Join(parts, ", "))
 	if hidden := sum.AtOrAbove(Info) - sum.AtOrAbove(min); hidden > 0 {
 		fmt.Fprintf(w, "%s below %s not shown; use --show %s to list them.\n", count(hidden, "finding"), min, lowestShown(sum))
 	}

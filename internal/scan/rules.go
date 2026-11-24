@@ -23,6 +23,7 @@ const (
 	RuleUnprotected = "RORO-G001"
 	RuleRemote      = "RORO-G002"
 	RuleUnusual     = "RORO-G003"
+	RuleDisabled    = "RORO-G004"
 )
 
 type check func(clients.Server, Context) []Finding

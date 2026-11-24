@@ -84,7 +84,7 @@ func checkSecrets(s clients.Server, _ Context) []Finding {
 			out = append(out, Finding{
 				Rule: RuleSecret, Severity: High,
 				Title:  "Secret written in the config file",
-				Detail: fmt.Sprintf("%s looks like a %s", where, kindName),
+				Detail: fmt.Sprintf("%s looks like %s", where, withArticle(kindName)),
 				Fix:    "Rotate it, then load it from an environment variable or your OS keychain. Anything that can read this file can read the secret.",
 			})
 			return
@@ -123,4 +123,12 @@ func checkSecrets(s clients.Server, _ Context) []Finding {
 	}
 	look("url", "", s.URL)
 	return out
+}
+
+// withArticle puts "a" or "an" before a noun phrase.
+func withArticle(noun string) string {
+	if noun != "" && strings.ContainsRune("aeiouAEIOU", rune(noun[0])) {
+		return "an " + noun
+	}
+	return "a " + noun
 }

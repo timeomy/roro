@@ -20,6 +20,7 @@ scripts/third-party-licenses.sh. Principal dependencies:
   modernc.org/sqlite                       BSD-3-Clause
   github.com/spf13/cobra                   Apache-2.0
   go.yaml.in/yaml/v3                       MIT and Apache-2.0
+  github.com/BurntSushi/toml               MIT
 
 The Model Context Protocol Go SDK is undergoing a licensing transition from
 the MIT License to Apache-2.0. Contributions not yet relicensed remain under

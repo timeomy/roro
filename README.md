@@ -398,6 +398,7 @@ roro: 1 finding at or above the --fail-on level
 | RORO-G001 | info | a local server Roro does not protect (shown with `--show info`) |
 | RORO-G002 | info | a remote server, which Roro cannot check yet |
 | RORO-G003 | info | an entry written in a form Roro does not fully read |
+| RORO-G004 | info | a server turned off in its client; only the secret checks run |
 
 Secrets are never printed: a finding names where the secret is and what it
 looks like, not its value. `roro scan` exits 1 when a finding reaches

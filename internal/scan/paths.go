@@ -19,7 +19,13 @@ func checkBroadPaths(s clients.Server, ctx Context) []Finding {
 	_, args := effective(s)
 	var out []Finding
 	for _, a := range args {
-		if label := broadPath(a, ctx.Home); label != "" {
+		value := a
+		if strings.HasPrefix(a, "-") {
+			if _, v, has := strings.Cut(a, "="); has {
+				value = v
+			}
+		}
+		if label := broadPath(value, ctx.Home); label != "" {
 			out = append(out, Finding{Rule: RuleBroadPath, Severity: Medium, Title: "Access to a very broad folder",
 				Detail: fmt.Sprintf("the server is given %s (%s)", label, a),
 				Fix:    "Give it only the project folders it needs."})

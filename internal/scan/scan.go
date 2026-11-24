@@ -53,7 +53,8 @@ type Finding struct {
 type ServerReport struct {
 	Name     string    `json:"name"`
 	Scope    string    `json:"scope,omitempty"`
-	Kind     string    `json:"kind"` // "local", "remote", or "unknown"
+	Kind     string    `json:"kind"`
+	Disabled bool      `json:"disabled,omitempty"` // "local", "remote", or "unknown"
 	Findings []Finding `json:"findings"`
 }
 
@@ -89,8 +90,16 @@ func File(loc clients.Location, data []byte, ctx Context) FileReport {
 // Server runs every check on one server entry. Findings are sorted worst
 // first, then by rule.
 func Server(s clients.Server, ctx Context) ServerReport {
-	r := ServerReport{Name: s.Name, Scope: s.Scope, Kind: kind(s), Findings: []Finding{}}
-	for _, check := range checks {
+	r := ServerReport{Name: s.Name, Scope: s.Scope, Kind: kind(s), Disabled: s.Disabled, Findings: []Finding{}}
+	run := checks
+	if s.Disabled {
+		// A turned-off server does not run, but a secret in its entry is
+		// still readable by anything that reads the file.
+		run = []check{checkSecrets}
+		r.Findings = append(r.Findings, Finding{Rule: RuleDisabled, Severity: Info, Title: "Server is turned off",
+			Detail: "only the secret checks ran", Fix: "Remove the entry if you no longer use it."})
+	}
+	for _, check := range run {
 		r.Findings = append(r.Findings, check(s, ctx)...)
 	}
 	slices.SortStableFunc(r.Findings, func(a, b Finding) int {
