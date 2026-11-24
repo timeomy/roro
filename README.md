@@ -109,6 +109,8 @@ go install github.com/timeomy/roro/cmd/roro@latest
 - **Your own rules, when you want them.** Allow, deny, or ask a person, per
   agent and per tool. See [docs/policy.md](docs/policy.md).
 - **An undo.** `roro unprotect` puts every file back the way it was.
+- **A setup check.** `roro scan` reports risky MCP server entries before
+  anything runs. See [Scan your setup](#scan-your-setup).
 
 Run `roro protect` again after you add a new MCP server. Quit your AI apps
 before you run it if you can, since some of them rewrite their settings while
@@ -359,6 +361,59 @@ roro resume
 
 Every running Roro process that shares the state directory obeys at the
 next tool call. The switch survives restarts. Kills and resumes are logged.
+
+## Scan your setup
+
+`roro scan` reads the MCP settings of Claude Code, Claude Desktop, Cursor,
+Windsurf, Codex, and `./.mcp.json`, and lists risky server entries. It only
+reads files: it never starts a server or connects to one.
+
+```text
+$ roro scan
+
+Claude Desktop  ~/Library/Application Support/Claude/claude_desktop_config.json
+  github
+    HIGH   Secret written in the config file  RORO-S001
+           env GITHUB_PERSONAL_ACCESS_TOKEN looks like a github token
+           fix: Rotate it, then load it from an environment variable or your OS keychain. Anything that can read this file can read the secret.
+    MEDIUM Package not pinned to a version  RORO-P001
+           npx runs "@modelcontextprotocol/server-github", so a new release runs the next time your AI tool starts
+           fix: Pin an exact version (name@1.2.3, name==1.2.3, or image:tag / image@sha256:...) and update on purpose.
+    LOW    Tool calls are not checked  RORO-G001
+           nothing checks or logs what your agent asks this server to do
+           fix: Run `roro protect` to put Roro in front of it.
+
+Scanned 1 server in 1 file. Found 1 high, 1 medium, 1 low.
+roro: 1 finding at or above the --fail-on level
+```
+
+| Rule | Severity | What it finds |
+|---|---|---|
+| RORO-S001 | high | a key, token, or password written in the file (env, headers, arguments, URL) |
+| RORO-S002 | medium | a credential-named setting holding a plain value instead of `${VAR}` |
+| RORO-N001 | high | a remote server over plain `http://` (localhost is fine) |
+| RORO-C001 | high | a container run with `--privileged`, the Docker socket, or the host disk mounted |
+| RORO-P001 | medium | `npx`, `uvx`, `pipx`, `pnpm dlx`, `docker run` and similar without an exact version |
+| RORO-F001 | medium | a server given the whole disk or your whole home folder |
+| RORO-C002 | low | a container on the host network |
+| RORO-X001 | low | a server started through `sh -c` or `cmd /c` |
+| RORO-G001 | low | a local server Roro does not protect |
+| RORO-G002 | info | a remote server, which Roro cannot check yet |
+| RORO-G003 | info | an entry written in a form Roro does not fully read |
+
+Secrets are never printed: a finding names where the secret is and what it
+looks like, not its value. `roro scan` exits 1 when a finding reaches
+`--fail-on` (default `high`, or `none`), so it can gate CI:
+
+```sh
+roro scan --file .mcp.json --fail-on medium
+roro scan --json > mcp-scan.json
+roro scan --show info          # also list low and info findings
+```
+
+Secret detection is pattern matching: it finds known token formats and
+credential-named settings, not every secret. A scan is a check of what is
+written down; what a server does at run time is what `roro protect` is for.
 
 ## Tool pinning
 

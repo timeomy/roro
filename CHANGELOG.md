@@ -4,6 +4,17 @@ Every release, newest first. Each heading is the version, the date, and one
 line on what the release is about. The release page on GitHub is built from
 the matching section.
 
+## Unreleased
+
+### New
+
+- **`roro scan`.** Checks the MCP settings of Claude Code, Claude Desktop,
+  Cursor, Windsurf, Codex, and `./.mcp.json` for risky entries: secrets
+  written in the file, packages not pinned to a version, plain HTTP remote
+  servers, access to the whole disk or home folder, privileged containers,
+  shell launchers, and servers Roro does not protect. It only reads files and
+  never prints a secret. `--json` for machines, `--fail-on` to gate CI.
+
 ## 0.3.0 (2026-11-19): One step setup for every MCP client
 
 ### New

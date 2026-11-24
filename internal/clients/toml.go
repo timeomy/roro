@@ -34,6 +34,7 @@ type tomlServerBlock struct {
 	command          string
 	cmdComment       string // trailing comment on the command line, kept on rewrite
 	args             []string
+	url              string // remote server address, when written as a plain string
 	hasURL, bad      bool
 }
 
@@ -159,6 +160,9 @@ func parseTOMLServers(lines []string) (blocks []tomlServerBlock, other bool) {
 		switch m[2] {
 		case "url":
 			b.hasURL = true
+			if u, ok := parseTOMLString(value); ok {
+				b.url = u
+			}
 		case "command":
 			s, ok := parseTOMLString(value)
 			b.cmdLine, b.command, b.cmdComment, b.bad = i, s, comment, b.bad || !ok || s == ""
