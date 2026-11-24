@@ -34,6 +34,7 @@ Roro's own logs go to stderr. Stdout is reserved for MCP protocol traffic.
 Get started:
   roro protect              protect the MCP servers your AI tools already use
   roro unprotect            undo that
+  roro scan                 check your MCP setup for risky entries
 
 Or set it up by hand:
   roro init                 write roro.yaml, a starter policy, and a signing key
@@ -49,7 +50,7 @@ Or set it up by hand:
 		"path to roro.yaml (default: $RORO_CONFIG, else ./roro.yaml, else ~/.roro/roro.yaml)")
 
 	cmd.AddCommand(
-		newInitCmd(flags), newProtectCmd(), newUnprotectCmd(), newWrapCmd(flags), newServeCmd(flags), newCheckCmd(flags),
+		newInitCmd(flags), newProtectCmd(), newUnprotectCmd(), newScanCmd(), newWrapCmd(flags), newServeCmd(flags), newCheckCmd(flags),
 		newVerifyCmd(flags), newLogsCmd(flags), newExportCmd(flags),
 		newKillCmd(flags), newResumeCmd(flags), newStatusCmd(flags),
 		newApprovalsCmd(flags), newPinsCmd(flags), newTokenCmd(),

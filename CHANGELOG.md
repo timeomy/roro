@@ -4,6 +4,23 @@ Every release, newest first. Each heading is the version, the date, and one
 line on what the release is about. The release page on GitHub is built from
 the matching section.
 
+## Unreleased
+
+### New
+
+- **`roro scan`.** Checks the MCP settings of Claude Code, Claude Desktop,
+  Cursor, Windsurf, Codex, and `./.mcp.json` for risky entries: secrets
+  written in the file, packages not pinned to a version, plain HTTP remote
+  servers, access to the whole disk or home folder, privileged containers,
+  shell launchers, and servers Roro does not protect. It only reads files and
+  never prints a secret. `--json` for machines, `--fail-on` to gate CI.
+- **Codex settings are read with a full TOML parser** when scanning, so
+  multi-line strings and inline tables are checked and a broken file is
+  reported instead of half read. `roro protect` still edits the file line by
+  line and keeps your comments.
+- **JSON files with comments or trailing commas** now get a clear error
+  message in `roro protect` and `roro scan`.
+
 ## 0.3.0 (2026-11-19): One step setup for every MCP client
 
 ### New
