@@ -153,6 +153,12 @@ var containerValueFlags = map[string]bool{
 	"-l": true, "--label": true, "--platform": true, "--pull": true, "--cpus": true,
 	"-m": true, "--memory": true, "--add-host": true, "--cap-add": true, "--cap-drop": true,
 	"--device": true, "--dns": true, "-h": true, "--hostname": true, "--security-opt": true,
+	"--tmpfs": true, "--pid": true, "--ipc": true, "--log-driver": true, "--log-opt": true,
+	"--ulimit": true, "--restart": true, "--group-add": true, "--shm-size": true,
+	"--stop-signal": true, "--health-cmd": true, "--gpus": true, "--runtime": true,
+	"--cidfile": true, "--memory-swap": true, "--cpuset-cpus": true, "--label-file": true,
+	"--network-alias": true, "--uts": true, "--userns": true, "--cgroupns": true,
+	"--expose": true, "--link": true, "--volumes-from": true,
 }
 
 func containerLike(tool string, args []string) (launch, bool) {

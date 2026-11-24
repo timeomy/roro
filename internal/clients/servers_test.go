@@ -66,3 +66,18 @@ func TestListServersTOML(t *testing.T) {
 		t.Fatalf("dotted form = %+v", other)
 	}
 }
+
+func TestListServersTOMLHeaders(t *testing.T) {
+	data := []byte("[mcp_servers.r]\nurl = \"https://x/mcp\"\nbearer_token_env_var = \"GH\"\n\n[mcp_servers.r.http_headers]\nAuthorization = \"Bearer abc\" # c\n\"X-Key\" = 'k'\n\n[mcp_servers.r.env_http_headers]\nX-Other = \"OTHER_ENV\"\n\n[mcp_servers.r.env]\nA = \"1\"\n\n[mcp_servers.ghost.http_headers]\nH = \"v\"\n")
+	got := listTOML(data)
+	if len(got) != 1 {
+		t.Fatalf("got %+v", got)
+	}
+	r := got[0]
+	if r.Headers["Authorization"] != "Bearer abc" || r.Headers["X-Key"] != "k" || len(r.Headers) != 2 {
+		t.Fatalf("headers = %+v", r.Headers)
+	}
+	if r.Env["A"] != "1" || len(r.Env) != 1 {
+		t.Fatalf("env = %+v", r.Env)
+	}
+}

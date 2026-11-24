@@ -101,7 +101,8 @@ func stringMap(e *object, key string) map[string]string {
 }
 
 // listTOML reads Codex servers, including their [mcp_servers.NAME.env]
-// tables. Values it cannot parse are skipped and the entry marked unusual.
+// and [mcp_servers.NAME.http_headers] tables. Values it cannot parse are
+// skipped and the entry marked unusual.
 func listTOML(data []byte) []Server {
 	lines := strings.Split(string(data), "\n")
 	blocks, other := parseTOMLServers(lines)
@@ -111,9 +112,14 @@ func listTOML(data []byte) []Server {
 		index[b.name] = len(out)
 		out = append(out, Server{Name: b.name, Command: b.command, Args: b.args, URL: b.url, Unusual: b.bad})
 	}
-	for name, env := range tomlEnvTables(lines) {
+	for name, env := range tomlSubTables(lines, ".env") {
 		if i, ok := index[name]; ok {
 			out[i].Env = env
+		}
+	}
+	for name, headers := range tomlSubTables(lines, ".http_headers") {
+		if i, ok := index[name]; ok {
+			out[i].Headers = headers
 		}
 	}
 	if other {
@@ -122,9 +128,9 @@ func listTOML(data []byte) []Server {
 	return out
 }
 
-// tomlEnvTables reads [mcp_servers.NAME.env] tables of simple
-// key = "string" lines.
-func tomlEnvTables(lines []string) map[string]map[string]string {
+// tomlSubTables reads [mcp_servers.NAME<suffix>] tables (suffix ".env" or
+// ".http_headers") of simple key = "string" lines.
+func tomlSubTables(lines []string, suffix string) map[string]map[string]string {
 	out := map[string]map[string]string{}
 	cur := ""
 	for _, raw := range lines {
@@ -136,7 +142,7 @@ func tomlEnvTables(lines []string) map[string]map[string]string {
 				continue
 			}
 			header := tomlDotSpaces.ReplaceAllString(m[1], ".")
-			if name, ok := strings.CutSuffix(header, ".env"); ok {
+			if name, ok := strings.CutSuffix(header, suffix); ok {
 				if s := tomlServer.FindStringSubmatch(name); s != nil {
 					cur = s[1] + s[2]
 					out[cur] = map[string]string{}

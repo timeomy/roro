@@ -1,0 +1,9 @@
+[mcp_servers.hosted]
+url = "https://mcp.example.com/http"
+bearer_token_env_var = "HOSTED_TOKEN"
+
+[mcp_servers.hosted.http_headers]
+X-Api-Key = "plain-header-key"
+
+[mcp_servers.hosted.env_http_headers]
+X-Other = "OTHER_ENV"

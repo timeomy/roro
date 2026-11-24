@@ -390,13 +390,13 @@ roro: 1 finding at or above the --fail-on level
 | Rule | Severity | What it finds |
 |---|---|---|
 | RORO-S001 | high | a key, token, or password written in the file (env, headers, arguments, URL) |
-| RORO-S002 | medium | a credential-named setting holding a plain value instead of `${VAR}` |
+| RORO-S002 | medium | a credential-named setting holding a plain value instead of `${VAR}` (numbers, placeholders like `<token>`, and settings such as `MAX_TOKENS` are ignored) |
 | RORO-N001 | high | a remote server over plain `http://` (localhost is fine) |
-| RORO-C001 | high | a container run with `--privileged`, the Docker socket, or the host disk mounted |
+| RORO-C001 | high | a container run with `--privileged`, `--cap-add SYS_ADMIN` or `ALL`, or with the Docker socket, the host disk, or your home folder mounted (`-v` or `--mount`) |
 | RORO-P001 | medium | `npx`, `uvx`, `pipx`, `pnpm dlx`, `docker run` and similar without an exact version |
-| RORO-F001 | medium | a server given the whole disk or your whole home folder |
-| RORO-C002 | low | a container on the host network |
-| RORO-X001 | low | a server started through `sh -c` or `cmd /c` |
+| RORO-F001 | medium | a server given the whole disk, your home folder, or a system folder such as `/etc`, `/Users`, or `C:\Users` |
+| RORO-C002 | low | a container sharing the host network, process list (`--pid=host`), or IPC (`--ipc=host`) |
+| RORO-X001 | low | a server started through a shell line with chaining, pipes, or substitution (plain `sh -c "npx srv"` and `cmd /c npx srv` are checked as the program inside) |
 | RORO-G001 | low | a local server Roro does not protect |
 | RORO-G002 | info | a remote server, which Roro cannot check yet |
 | RORO-G003 | info | an entry written in a form Roro does not fully read |

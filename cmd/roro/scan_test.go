@@ -88,6 +88,18 @@ func TestScanDefaultLocations(t *testing.T) {
 	if err != nil || !strings.Contains(out, "No MCP configuration found") {
 		t.Fatalf("empty home: err = %v, out = %s", err, out)
 	}
+	out, err = runScanCmd(t, "--json")
+	var empty struct {
+		Version int             `json:"version"`
+		Files   []any           `json:"files"`
+		Summary json.RawMessage `json:"summary"`
+	}
+	if err != nil || json.Unmarshal([]byte(out), &empty) != nil || empty.Version != 1 || empty.Files == nil || len(empty.Files) != 0 {
+		t.Fatalf("empty home --json: err = %v, out = %s", err, out)
+	}
+	if !strings.Contains(out, `"worst": "none"`) || strings.Contains(out, "No MCP configuration") {
+		t.Fatalf("empty home --json summary: %s", out)
+	}
 
 	cursor := filepath.Join(home, ".cursor", "mcp.json")
 	if err := os.MkdirAll(filepath.Dir(cursor), 0o700); err != nil {

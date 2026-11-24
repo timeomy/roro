@@ -63,8 +63,8 @@ func TestServerChecks(t *testing.T) {
 		{"host network", clients.Server{Command: "docker", Args: []string{"run", "--network", "host", "img:1"}}, []string{RuleHostNetwork}, nil},
 		{"host network =", clients.Server{Command: "podman", Args: []string{"run", "--net=host", "img:1"}}, []string{RuleHostNetwork}, nil},
 		{"docker non-run", clients.Server{Command: "docker", Args: []string{"exec", "--privileged"}}, nil, []string{RulePrivileged}},
-		{"shell", clients.Server{Command: "bash", Args: []string{"-c", "npx srv"}}, []string{RuleShell}, nil},
-		{"cmd /c", clients.Server{Command: "cmd.exe", Args: []string{"/C", "srv"}}, []string{RuleShell}, nil},
+		{"shell", clients.Server{Command: "bash", Args: []string{"-c", "npx srv | tee log"}}, []string{RuleShell}, nil},
+		{"cmd /c", clients.Server{Command: "cmd.exe", Args: []string{"/C", "srv & del x"}}, []string{RuleShell}, nil},
 		{"shell script file ok", clients.Server{Command: "bash", Args: []string{"run.sh"}}, nil, []string{RuleShell}},
 		{"wrapped is protected", wrapped("npx", "-y", "srv@1.0.0"), nil, []string{RuleUnprotected, RuleUnpinned}},
 		{"wrapped inner unpinned", wrapped("npx", "-y", "srv"), []string{RuleUnpinned}, []string{RuleUnprotected}},
@@ -132,7 +132,7 @@ func TestFileFixtures(t *testing.T) {
 	if sum.Counts["high"] != 5 {
 		t.Fatalf("high = %d, want 5 (%+v)", sum.Counts["high"], sum.Counts)
 	}
-	if sum.Worst != High || sum.AtOrAbove(Medium) <= sum.AtOrAbove(High) {
+	if sum.Worst != "high" || sum.AtOrAbove(Medium) <= sum.AtOrAbove(High) {
 		t.Fatalf("worst/at-or-above wrong: %+v", sum)
 	}
 	for _, s := range jsonRep.Servers {

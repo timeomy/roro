@@ -79,9 +79,12 @@ func runScan(out io.Writer, f *scanFlags) error {
 		return err
 	}
 	reports := scanAll(locs, scan.Context{Home: home})
-	if len(reports) == 0 {
+	if len(reports) == 0 && !f.json {
 		fmt.Fprintln(out, "No MCP configuration found in Claude Code, Claude Desktop, Cursor, Windsurf, Codex, or ./.mcp.json.")
 		return nil
+	}
+	if reports == nil {
+		reports = []scan.FileReport{}
 	}
 	if f.json {
 		if err := scan.WriteJSON(out, reports); err != nil {

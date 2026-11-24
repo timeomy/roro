@@ -82,11 +82,18 @@ func writeServer(w io.Writer, s ServerReport, min Severity, st Style) {
 	if s.Scope != "" {
 		name += st.paint("2", "  (project "+st.c(s.Scope)+")")
 	}
-	shown := 0
+	shown, hidden := 0, 0
 	for _, fd := range s.Findings {
-		if fd.Severity >= min {
+		switch {
+		case fd.Severity >= min:
 			shown++
+		case fd.Severity > Info:
+			hidden++
 		}
+	}
+	if shown == 0 && hidden > 0 {
+		fmt.Fprintf(w, "  %s  %s\n", name, st.paint("2", fmt.Sprintf("%d below %s not shown", hidden, min)))
+		return
 	}
 	if shown == 0 {
 		fmt.Fprintf(w, "  %s %s\n", st.paint("32", "ok"), name)
