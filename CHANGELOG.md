@@ -4,7 +4,7 @@ Every release, newest first. Each heading is the version, the date, and one
 line on what the release is about. The release page on GitHub is built from
 the matching section.
 
-## Unreleased
+## 0.4.0 (2026-11-24): Scan your MCP setup for risky entries
 
 ### New
 
