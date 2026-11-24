@@ -26,12 +26,11 @@ var authScheme = regexp.MustCompile(`(?i)^(bearer|basic|token)\s+`)
 // placeholderValue matches text that stands in for a real credential.
 var placeholderValue = regexp.MustCompile(`(?i)^(<.*>|your[_-].*|xxx+|changeme|\*+|placeholder|todo)$`)
 
-// limitSegments are last words that mark a setting as a number or location,
-// not a credential, as in TOKEN_LIMIT or KEY_FILE.
-var limitSegments = map[string]bool{
-	"MAX": true, "MIN": true, "LIMIT": true, "COUNT": true, "SIZE": true,
-	"URL": true, "PATH": true, "FILE": true, "TTL": true, "TIMEOUT": true,
-}
+// storedElsewhere matches values that name a file or another variable.
+var storedElsewhere = regexp.MustCompile(`^(/|~|\./|\.\./|[A-Za-z]:[\\/]|[A-Z][A-Z0-9_]+$)`)
+
+// argFlag matches a command-line flag such as --token or -k.
+var argFlag = regexp.MustCompile(`^--?[A-Za-z][\w-]*$`)
 
 // isReference reports whether a value points at a variable rather than
 // holding a secret. An "Authorization" scheme word is ignored, and text
@@ -45,21 +44,18 @@ func isReference(value string) bool {
 }
 
 // notACredential reports whether a credential-named setting plainly holds
-// something else: a number, a flag, a placeholder, or a limit.
+// something else: a number, a flag, a placeholder, a path, the name of
+// another variable, or a limit.
 func notACredential(key, value string) bool {
 	v := strings.TrimSpace(value)
 	if _, err := strconv.ParseFloat(v, 64); err == nil {
 		return true
 	}
-	if strings.EqualFold(v, "true") || strings.EqualFold(v, "false") || placeholderValue.MatchString(v) {
+	if strings.EqualFold(v, "true") || strings.EqualFold(v, "false") ||
+		placeholderValue.MatchString(v) || storedElsewhere.MatchString(v) {
 		return true
 	}
-	upper := strings.ToUpper(key)
-	if strings.HasPrefix(upper, "MAX_") || strings.HasPrefix(upper, "MIN_") {
-		return true
-	}
-	parts := strings.FieldsFunc(upper, func(r rune) bool { return r == '_' || r == '-' })
-	return len(parts) > 0 && limitSegments[parts[len(parts)-1]]
+	return namesNotACredential(key)
 }
 
 // variableName turns a setting name into an environment variable name.
@@ -93,7 +89,7 @@ func checkSecrets(s clients.Server, _ Context) []Finding {
 			})
 			return
 		}
-		if key != "" && redact.IsSecretKey(key) && !notACredential(key, value) {
+		if key != "" && isCredentialKey(key) && !notACredential(key, value) {
 			out = append(out, Finding{
 				Rule: RulePlainCred, Severity: Medium,
 				Title:  "Credential stored as plain text",
@@ -108,7 +104,17 @@ func checkSecrets(s clients.Server, _ Context) []Finding {
 	for _, k := range sortedKeys(s.Headers) {
 		look("header "+k, k, s.Headers[k])
 	}
+	skip := -1
 	for i, a := range s.Args {
+		if i == skip {
+			continue
+		}
+		if name := strings.TrimLeft(a, "-"); argFlag.MatchString(a) && isCredentialKey(name) &&
+			i+1 < len(s.Args) && !argFlag.MatchString(s.Args[i+1]) {
+			look(fmt.Sprintf("argument %d", i+2), name, s.Args[i+1])
+			skip = i + 1
+			continue
+		}
 		key, value, hasValue := strings.Cut(strings.TrimLeft(a, "-"), "=")
 		if !hasValue {
 			key, value = "", a

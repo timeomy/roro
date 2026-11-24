@@ -6,9 +6,12 @@ import (
 	"strings"
 )
 
-// exactVersion matches a version that names one release: 1.2.3, v2, 0.4.0-rc.1.
-// Ranges (^1.2, ~1, 1.x, *) and tags (latest, next) do not match.
-var exactVersion = regexp.MustCompile(`^v?\d+(\.\d+){0,3}([-+][0-9A-Za-z.\-+]+)?$`)
+// fullVersion is an npm version that names one release: x.y.z, with an
+// optional prerelease or build part. npm treats @1 and @1.2 as ranges.
+var fullVersion = regexp.MustCompile(`^v?\d+\.\d+\.\d+([-+][0-9A-Za-z.\-+]+)?$`)
+
+// pyVersion is a Python version for an exact pin: x.y or x.y.z.
+var pyVersion = regexp.MustCompile(`^v?\d+\.\d+(\.\d+)?([-+.][0-9A-Za-z.\-+]+)?$`)
 
 // commitHash is a full git commit id.
 var commitHash = regexp.MustCompile(`^[0-9a-f]{40}$`)
@@ -106,7 +109,7 @@ func npmPinned(spec string) bool {
 		name = name[1:]
 	}
 	_, version, has := strings.Cut(name, "@")
-	return has && exactVersion.MatchString(version)
+	return has && fullVersion.MatchString(version)
 }
 
 var pyValueFlags = map[string]bool{"--with": true, "--python": true, "-p": true, "--index-url": true, "--spec": true}
@@ -136,13 +139,22 @@ func pythonLike(tool string, args []string) (launch, bool) {
 	if spec == "" || isLocalPath(spec) {
 		return launch{}, false
 	}
-	pinned := false
-	if _, v, has := strings.Cut(spec, "=="); has {
-		pinned = exactVersion.MatchString(v)
-	} else if _, v, has := strings.Cut(spec, "@"); has {
-		pinned = exactVersion.MatchString(v)
+	return launch{tool: tool, spec: spec, pinned: pythonPinned(spec)}, true
+}
+
+func pythonPinned(spec string) bool {
+	if strings.Contains(spec, "git+") || strings.Contains(spec, "://") {
+		// git or URL specs are pinned only by a full commit hash.
+		i := strings.LastIndex(spec, "@")
+		return i >= 0 && commitHash.MatchString(spec[i+1:])
 	}
-	return launch{tool: tool, spec: spec, pinned: pinned}, true
+	if _, v, has := strings.Cut(spec, "=="); has {
+		return pyVersion.MatchString(v)
+	}
+	if _, v, has := strings.Cut(spec, "@"); has {
+		return pyVersion.MatchString(v)
+	}
+	return false
 }
 
 // containerValueFlags take a separate value in `docker run`.
@@ -159,7 +171,26 @@ var containerValueFlags = map[string]bool{
 	"--cidfile": true, "--memory-swap": true, "--cpuset-cpus": true, "--label-file": true,
 	"--network-alias": true, "--uts": true, "--userns": true, "--cgroupns": true,
 	"--expose": true, "--link": true, "--volumes-from": true,
+	"--pids-limit": true, "--sysctl": true, "--storage-opt": true, "--mac-address": true,
+	"--ip": true, "--ip6": true, "--dns-search": true, "--dns-option": true, "-c": true,
+	"--cpu-shares": true, "--cpu-period": true, "--cpu-quota": true, "--device-cgroup-rule": true,
+	"--annotation": true, "--stop-timeout": true, "--oom-score-adj": true, "--blkio-weight": true,
+	"--memory-reservation": true, "--kernel-memory": true, "--isolation": true,
+	"--health-interval": true, "--health-retries": true, "--health-timeout": true,
+	"--health-start-period": true, "--domainname": true, "--link-local-ip": true,
+	"--volume-driver": true, "--attach": true, "-a": true,
 }
+
+// containerBoolFlags take no value.
+var containerBoolFlags = map[string]bool{
+	"-i": true, "-t": true, "-d": true, "--rm": true, "--init": true, "--read-only": true,
+	"--privileged": true, "--interactive": true, "--tty": true, "--detach": true,
+	"--no-healthcheck": true, "--oom-kill-disable": true, "--sig-proxy": true,
+	"--disable-content-trust": true, "--publish-all": true, "-P": true, "-q": true, "--quiet": true,
+}
+
+// shortBoolCluster matches combined boolean short flags such as -it or -dit.
+var shortBoolCluster = regexp.MustCompile(`^-[itdqP]+$`)
 
 func containerLike(tool string, args []string) (launch, bool) {
 	for i := 0; i < len(args); i++ {
@@ -169,6 +200,14 @@ func containerLike(tool string, args []string) (launch, bool) {
 			continue
 		}
 		if strings.HasPrefix(a, "-") {
+			if strings.Contains(a, "=") || containerBoolFlags[a] || shortBoolCluster.MatchString(a) {
+				continue
+			}
+			// An unknown flag followed by a word: that word may be its value
+			// or the image. Do not guess.
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				return launch{}, false
+			}
 			continue
 		}
 		return launch{tool: tool, spec: a, pinned: imagePinned(a)}, true

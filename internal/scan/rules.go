@@ -77,7 +77,7 @@ func checkProtection(s clients.Server, _ Context) []Finding {
 		return []Finding{{Rule: RuleRemote, Severity: Info, Title: "Remote server, not checked by Roro",
 			Detail: "roro protect wraps local servers only", Fix: "Review what this server can do with the access you give it."}}
 	case !clients.RunsBehindRoro(s.Command, s.Args):
-		return []Finding{{Rule: RuleUnprotected, Severity: Low, Title: "Tool calls are not checked",
+		return []Finding{{Rule: RuleUnprotected, Severity: Info, Title: "Tool calls are not checked",
 			Detail: "nothing checks or logs what your agent asks this server to do",
 			Fix:    "Run `roro protect` to put Roro in front of it."}}
 	}

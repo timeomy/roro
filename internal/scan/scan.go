@@ -115,11 +115,12 @@ func kind(s clients.Server) string {
 
 // Summary counts findings by severity across reports.
 type Summary struct {
-	Files   int            `json:"files"`
-	Servers int            `json:"servers"`
-	Counts  map[string]int `json:"counts"`
-	Worst   string         `json:"worst"` // "none" when nothing was found
-	bySev   map[Severity]int
+	Files      int            `json:"files"`      // files read successfully
+	Unreadable int            `json:"unreadable"` // files that could not be read or parsed
+	Servers    int            `json:"servers"`
+	Counts     map[string]int `json:"counts"`
+	Worst      string         `json:"worst"` // "none" when nothing was found
+	bySev      map[Severity]int
 }
 
 // Summarize totals a set of reports.
@@ -130,6 +131,10 @@ func Summarize(reports []FileReport) Summary {
 		sum.Counts[name] = 0
 	}
 	for _, f := range reports {
+		if f.Error != "" {
+			sum.Unreadable++
+			continue
+		}
 		sum.Files++
 		for _, s := range f.Servers {
 			sum.Servers++

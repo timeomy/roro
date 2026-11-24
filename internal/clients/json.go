@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -33,7 +34,7 @@ func decodeJSON(data []byte) (*object, error) {
 	dec.UseNumber()
 	v, err := decodeValue(dec)
 	if err != nil {
-		return nil, err
+		return nil, explainSyntax(err)
 	}
 	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
 		return nil, errors.New("unexpected content after the JSON document")
@@ -268,4 +269,18 @@ func rewriteJSON(data []byte, edit func(name string, e *object, command string, 
 		return data, results, nil
 	}
 	return encodeJSON(root), results, nil
+}
+
+// explainSyntax says why a file that looks like JSON was refused, when the
+// cause is a comment or a trailing comma (common in editor-written configs).
+func explainSyntax(err error) error {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "invalid character '/'"),
+		strings.Contains(msg, "invalid character '}' looking for beginning of object key string"),
+		strings.Contains(msg, "invalid character ']' looking for beginning of value"),
+		strings.Contains(msg, "invalid character ',' looking for beginning of value"):
+		return errors.New("the file is not plain JSON (comments or trailing commas are not supported)")
+	}
+	return err
 }

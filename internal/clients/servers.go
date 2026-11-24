@@ -122,6 +122,13 @@ func listTOML(data []byte) []Server {
 			out[i].Headers = headers
 		}
 	}
+	for name, in := range tomlInlineTables(lines) {
+		if i, ok := index[name]; ok {
+			out[i].Env = mergeStrings(out[i].Env, in.env)
+			out[i].Headers = mergeStrings(out[i].Headers, in.headers)
+			out[i].Unusual = out[i].Unusual || in.unusual
+		}
+	}
 	if other {
 		out = append(out, Server{Name: "(servers written another way)", Unusual: true})
 	}

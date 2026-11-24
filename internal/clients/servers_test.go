@@ -1,6 +1,9 @@
 package clients
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestListServersJSON(t *testing.T) {
 	data := []byte(`{
@@ -79,5 +82,69 @@ func TestListServersTOMLHeaders(t *testing.T) {
 	}
 	if r.Env["A"] != "1" || len(r.Env) != 1 {
 		t.Fatalf("env = %+v", r.Env)
+	}
+}
+
+func TestListServersTOMLInlineTables(t *testing.T) {
+	tests := []struct {
+		name    string
+		toml    string
+		env     map[string]string
+		headers map[string]string
+		unusual bool
+	}{
+		{"env and headers", "[mcp_servers.a]\ncommand = \"x\"\nenv = { K = \"v\", \"Q-2\" = 'w' } # c\nhttp_headers = { \"X-Api-Key\" = \"s,}\" }\n", map[string]string{"K": "v", "Q-2": "w"}, map[string]string{"X-Api-Key": "s,}"}, false},
+		{"empty table", "[mcp_servers.a]\ncommand = \"x\"\nenv = {}\n", nil, nil, false},
+		{"trailing comma", "[mcp_servers.a]\ncommand = \"x\"\nenv = { K = \"v\", }\n", map[string]string{"K": "v"}, nil, false},
+		{"non string value", "[mcp_servers.a]\ncommand = \"x\"\nenv = { K = 1 }\n", nil, nil, true},
+		{"nested table", "[mcp_servers.a]\ncommand = \"x\"\nenv = { K = { a = \"b\" } }\n", nil, nil, true},
+		{"multi line", "[mcp_servers.a]\ncommand = \"x\"\nenv = {\n K = \"v\"\n}\n", nil, nil, true},
+		{"not a table", "[mcp_servers.a]\ncommand = \"x\"\nhttp_headers = \"nope\"\n", nil, nil, true},
+		{"missing equals", "[mcp_servers.a]\ncommand = \"x\"\nenv = { K }\n", nil, nil, true},
+		{"bad quoted key", "[mcp_servers.a]\ncommand = \"x\"\nenv = { \"K = \"v\" }\n", nil, nil, true},
+		{"unterminated value", "[mcp_servers.a]\ncommand = \"x\"\nenv = { K = \"v }\n", nil, nil, true},
+		{"junk after value", "[mcp_servers.a]\ncommand = \"x\"\nenv = { K = \"v\" Z = \"w\" }\n", nil, nil, true},
+		{"other table ignored", "[mcp_servers.a]\ncommand = \"x\"\n[other]\nenv = { K = \"v\" }\n", nil, nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := listTOML([]byte(tt.toml))
+			if len(got) != 1 {
+				t.Fatalf("got %+v", got)
+			}
+			s := got[0]
+			if s.Unusual != tt.unusual || !sameStrings(s.Env, tt.env) || !sameStrings(s.Headers, tt.headers) {
+				t.Fatalf("got env %v headers %v unusual %v", s.Env, s.Headers, s.Unusual)
+			}
+		})
+	}
+}
+
+func sameStrings(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if b[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
+func TestDecodeJSONExplainsCommentsAndTrailingCommas(t *testing.T) {
+	for name, in := range map[string]string{
+		"comment":       "{\n// c\n\"a\":1}",
+		"object comma":  `{"a":1,}`,
+		"array comma":   `{"a":[1,]}`,
+		"block comment": `{"a":1 /* x */}`,
+	} {
+		_, err := ListServers(FormatJSON, []byte(in))
+		if err == nil || !strings.Contains(err.Error(), "not plain JSON (comments or trailing commas are not supported)") {
+			t.Errorf("%s: err = %v", name, err)
+		}
+	}
+	if _, err := ListServers(FormatJSON, []byte(`{"a":`)); err == nil || strings.Contains(err.Error(), "plain JSON") {
+		t.Errorf("plain truncation mislabelled: %v", err)
 	}
 }

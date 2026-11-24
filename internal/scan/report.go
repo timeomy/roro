@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,10 +17,31 @@ type JSONReport struct {
 
 // WriteJSON writes reports as one JSON document.
 func WriteJSON(w io.Writer, reports []FileReport) error {
-	enc := json.NewEncoder(w)
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
 	enc.SetEscapeHTML(false)
-	return enc.Encode(JSONReport{Version: 1, Files: reports, Summary: Summarize(reports)})
+	if err := enc.Encode(JSONReport{Version: 1, Files: reports, Summary: Summarize(reports)}); err != nil {
+		return err
+	}
+	_, err := io.WriteString(w, escapeInvisible(buf.String()))
+	return err
+}
+
+// escapeInvisible writes bidirectional-control and C1 control characters as
+// \uXXXX escapes. They are only ever inside JSON strings, so the document
+// stays valid and means the same, but nothing hidden reaches a terminal or
+// a diff view.
+func escapeInvisible(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if (r >= 0x202A && r <= 0x202E) || (r >= 0x2066 && r <= 0x2069) || r == 0x200E || r == 0x200F || (r >= 0x80 && r <= 0x9F) {
+			fmt.Fprintf(&b, `\u%04x`, r)
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 // Style controls text output. Clean, when set, is applied to every string
@@ -112,6 +134,9 @@ func writeServer(w io.Writer, s ServerReport, min Severity, st Style) {
 
 func writeSummary(w io.Writer, sum Summary, min Severity, st Style) {
 	fmt.Fprintf(w, "\nScanned %s in %s. ", count(sum.Servers, "server"), count(sum.Files, "file"))
+	if sum.Unreadable > 0 {
+		fmt.Fprintf(w, "%s could not be read. ", count(sum.Unreadable, "file"))
+	}
 	parts := []string{}
 	for _, s := range []Severity{High, Medium, Low, Info} {
 		if n := sum.bySev[s]; n > 0 {
@@ -119,7 +144,11 @@ func writeSummary(w io.Writer, sum Summary, min Severity, st Style) {
 		}
 	}
 	if len(parts) == 0 {
-		fmt.Fprintln(w, st.paint("32", "No issues found."))
+		if sum.Unreadable > 0 {
+			fmt.Fprintln(w)
+		} else {
+			fmt.Fprintln(w, st.paint("32", "No issues found."))
+		}
 		return
 	}
 	fmt.Fprintf(w, "Found %s.\n", strings.Join(parts, ", "))

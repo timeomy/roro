@@ -379,11 +379,9 @@ Claude Desktop  ~/Library/Application Support/Claude/claude_desktop_config.json
     MEDIUM Package not pinned to a version  RORO-P001
            npx runs "@modelcontextprotocol/server-github", so a new release runs the next time your AI tool starts
            fix: Pin an exact version (name@1.2.3, name==1.2.3, or image:tag / image@sha256:...) and update on purpose.
-    LOW    Tool calls are not checked  RORO-G001
-           nothing checks or logs what your agent asks this server to do
-           fix: Run `roro protect` to put Roro in front of it.
 
-Scanned 1 server in 1 file. Found 1 high, 1 medium, 1 low.
+Scanned 1 server in 1 file. Found 1 high, 1 medium, 1 info.
+1 finding below low not shown; use --show info to list them.
 roro: 1 finding at or above the --fail-on level
 ```
 
@@ -397,7 +395,7 @@ roro: 1 finding at or above the --fail-on level
 | RORO-F001 | medium | a server given the whole disk, your home folder, or a system folder such as `/etc`, `/Users`, or `C:\Users` |
 | RORO-C002 | low | a container sharing the host network, process list (`--pid=host`), or IPC (`--ipc=host`) |
 | RORO-X001 | low | a server started through a shell line with chaining, pipes, or substitution (plain `sh -c "npx srv"` and `cmd /c npx srv` are checked as the program inside) |
-| RORO-G001 | low | a local server Roro does not protect |
+| RORO-G001 | info | a local server Roro does not protect (shown with `--show info`) |
 | RORO-G002 | info | a remote server, which Roro cannot check yet |
 | RORO-G003 | info | an entry written in a form Roro does not fully read |
 
@@ -408,7 +406,7 @@ looks like, not its value. `roro scan` exits 1 when a finding reaches
 ```sh
 roro scan --file .mcp.json --fail-on medium
 roro scan --json > mcp-scan.json
-roro scan --show info          # also list low and info findings
+roro scan --show info          # also list info findings, such as unprotected servers
 ```
 
 Secret detection is pattern matching: it finds known token formats and

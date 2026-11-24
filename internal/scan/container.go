@@ -23,7 +23,10 @@ func checkContainer(s clients.Server, ctx Context) []Finding {
 			value = inline
 		}
 		switch {
-		case a == "--privileged":
+		case flag == "--privileged":
+			if hasInline && !truthy(inline) {
+				break
+			}
 			out = append(out, Finding{Rule: RulePrivileged, Severity: High, Title: "Container runs privileged",
 				Detail: "--privileged gives the server near full control of the host", Fix: "Remove --privileged."})
 		case flag == "-v" || flag == "--volume":
@@ -42,6 +45,18 @@ func checkContainer(s clients.Server, ctx Context) []Finding {
 			if value == "host" {
 				out = append(out, hostShare(strings.TrimPrefix(flag, "--"), "it can see or reach processes on your machine", flag+" host"))
 			}
+		case flag == "--security-opt":
+			if o := strings.ReplaceAll(strings.ToLower(value), ":", "="); o == "seccomp=unconfined" || o == "apparmor=unconfined" {
+				out = append(out, Finding{Rule: RulePrivileged, Severity: High, Title: "Container turns off a security filter",
+					Detail: "--security-opt " + o + " removes a protection that limits what the server can do on the host",
+					Fix:    "Remove --security-opt " + o + "."})
+			}
+		case flag == "--userns":
+			if value == "host" {
+				out = append(out, Finding{Rule: RulePrivileged, Severity: High, Title: "Container shares the host user namespace",
+					Detail: "--userns host means root in the container is root on your machine",
+					Fix:    "Remove --userns host."})
+			}
 		case flag == "--cap-add":
 			if c := strings.ToUpper(strings.TrimPrefix(strings.ToUpper(value), "CAP_")); c == "SYS_ADMIN" || c == "ALL" {
 				out = append(out, Finding{Rule: RulePrivileged, Severity: High, Title: "Container gets broad host powers",
@@ -50,6 +65,14 @@ func checkContainer(s clients.Server, ctx Context) []Finding {
 		}
 	}
 	return out
+}
+
+func truthy(v string) bool {
+	switch strings.ToLower(v) {
+	case "true", "1", "yes", "on":
+		return true
+	}
+	return false
 }
 
 func hostShare(what, detail, flag string) Finding {
