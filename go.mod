@@ -3,7 +3,7 @@ module github.com/timeomy/roro
 go 1.27.4
 
 require (
-	github.com/BurntSushi/toml v1.5.0
+	github.com/BurntSushi/toml v1.6.0
 	github.com/cedar-policy/cedar-go v1.9.2
 	github.com/google/go-cmp v0.7.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
